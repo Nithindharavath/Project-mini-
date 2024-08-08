@@ -103,6 +103,8 @@ def trade_t(num_of_stocks, port_value, current_price):
 
 def test_stock(stocks_test, initial_investment, num_episodes):
     global epsilon
+    net_worth_history = [initial_investment]
+
     for episode in range(num_episodes):
         state = get_state(stocks_test, 0)
         total_reward = 0
@@ -140,15 +142,24 @@ def test_stock(stocks_test, initial_investment, num_episodes):
         if episode % update_target_every == 0:
             update_target_network()
 
-    return net_worth
+        net_worth_history.append(net_worth)
+
+    return net_worth_history
 
 # Function to plot net worth
-def plot_net_worth(net_worth):
+def plot_net_worth(net_worth, stock_df):
     net_worth_df = pd.DataFrame(net_worth, columns=['value'])
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=net_worth_df.index, y=net_worth_df['value'], mode='lines', name='Portfolio Value', line=dict(color='cyan', width=2)))
-    fig.update_layout(title='Change in Portfolio Value Day by Day', xaxis_title='Number of Days since Feb 2013', yaxis_title='Value ($)')
+    fig.add_trace(go.Scatter(x=stock_df['date'], y=net_worth_df['value'], mode='lines', name='Portfolio Value', line=dict(color='cyan', width=2)))
+    fig.update_layout(title='Change in Portfolio Value Day by Day', xaxis_title='Date', yaxis_title='Value ($)')
     st.plotly_chart(fig, use_container_width=True)
+    
+    start_price = stock_df['close'].iloc[0]
+    end_price = stock_df['close'].iloc[-1]
+    
+    st.write(f"**Start Price:** ${start_price:.2f}")
+    st.write(f"**End Price:** ${end_price:.2f}")
+    
     st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> Increase in your net worth as a result of a model decision.</p>', unsafe_allow_html=True)
 
 # Function to calculate performance metrics
@@ -216,20 +227,36 @@ def show_stock_trend(stock, stock_df):
             trend_note = 'Stock does not appear to be in a solid uptrend. Better not to invest here; instead, pick a different stock.'
 
         st.markdown(f'<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> {trend_note}</p>', unsafe_allow_html=True)
+        
+        # Show upward and downward movements
+        show_upward_downward_details(stock_df)
+
+def show_upward_downward_details(stock_df):
+    upward_moves = stock_df[stock_df['close'] > stock_df['open']]
+    downward_moves = stock_df[stock_df['close'] < stock_df['open']]
+
+    st.write("### Upward Moves")
+    st.write(upward_moves[['date', 'open', 'close']])
+
+    st.write("### Downward Moves")
+    st.write(downward_moves[['date', 'open', 'close']])
 
 def strategy_simulation():
-    st.sidebar.subheader("Enter Your Available Initial Investment Fund")
-    invest = st.sidebar.slider('Select a range of values', 1000, 1000000)
-    if st.sidebar.button("Calculate", key=2):
-        data = pd.read_csv('all_stocks_5yr.csv')
-        stock = st.sidebar.selectbox("Choose Company Stocks", list(data['Name'].unique()), index=0)
+    data = pd.read_csv('all_stocks_5yr.csv')
+    stock = st.sidebar.selectbox("Choose Company Stocks", list(data['Name'].unique()), index=0)
+    
+    if stock:
         stock_df = data_prep(data, stock)
+
+        st.sidebar.subheader("Enter Your Available Initial Investment Fund")
+        invest = st.sidebar.slider('Select a range of values', 1000, 1000000)
         
-        num_episodes = 50  # Number of episodes for training
-        net_worth = test_stock(stock_df, invest, num_episodes)
-        plot_net_worth(net_worth)
-        metrics = calculate_performance_metrics([invest] + net_worth, invest)
-        display_performance_metrics(metrics)
+        if st.sidebar.button("Calculate", key=2):
+            num_episodes = 50  # Number of episodes for training
+            net_worth_history = test_stock(stock_df, invest, num_episodes)
+            plot_net_worth(net_worth_history, stock_df)
+            metrics = calculate_performance_metrics(net_worth_history, invest)
+            display_performance_metrics(metrics)
 
 def performance_metrics():
     st.write("### Performance Metrics Section")
@@ -237,4 +264,5 @@ def performance_metrics():
 
 if __name__ == '__main__':
     main()
+
 

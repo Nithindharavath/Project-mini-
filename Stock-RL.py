@@ -103,7 +103,6 @@ def trade_t(num_of_stocks, port_value, current_price):
 
 def test_stock(stocks_test, initial_investment, num_episodes):
     global epsilon
-    net_worth_history = []
     for episode in range(num_episodes):
         state = get_state(stocks_test, 0)
         total_reward = 0
@@ -140,17 +139,17 @@ def test_stock(stocks_test, initial_investment, num_episodes):
         replay()
         if episode % update_target_every == 0:
             update_target_network()
-        net_worth_history.append(net_worth)
 
-    return net_worth_history
+    return net_worth
 
 # Function to plot net worth
-def plot_net_worth(net_worth):
+def plot_net_worth(net_worth, initial_price, final_price):
     net_worth_df = pd.DataFrame(net_worth, columns=['value'])
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=net_worth_df.index, y=net_worth_df['value'], mode='lines', name='Portfolio Value', line=dict(color='cyan', width=2)))
     fig.update_layout(title='Change in Portfolio Value Day by Day', xaxis_title='Number of Days since Feb 2013', yaxis_title='Value ($)')
     st.plotly_chart(fig, use_container_width=True)
+    st.markdown(f'<b><p style="font-family:Play; color:Cyan; font-size: 20px;">Start Price: ${initial_price}, End Price: ${final_price}</p>', unsafe_allow_html=True)
     st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> Increase in your net worth as a result of a model decision.</p>', unsafe_allow_html=True)
 
 # Function to calculate performance metrics
@@ -175,27 +174,6 @@ def display_performance_metrics(metrics):
     for key, value in metrics.items():
         st.write(f"**{key}:** {value:.2f}")
 
-# Function to analyze all companies for upward/downward trend
-def analyze_all_companies(data):
-    results = []
-    for name in data['Name'].unique():
-        df = data_prep(data, name)
-        if df['close'].iloc[-1] > df['close'].iloc[0]:
-            trend = "Upward"
-            note = "Positive trend observed."
-            color = "green"
-        else:
-            trend = "Downward"
-            note = "Negative trend observed."
-            color = "red"
-        results.append({
-            "Company": name,
-            "Trend": trend,
-            "Note": f'<span style="color:{color};">{note}</span>'
-        })
-    return pd.DataFrame(results)
-
-# Main application function
 def main():
     st.title("Optimizing Stock Trading Strategy With Reinforcement Learning")
     
@@ -203,10 +181,7 @@ def main():
     selected_tab = st.sidebar.selectbox("Select a tab", tabs)
 
     if selected_tab == "Home":
-        st.write("Welcome to the Stock Trading Strategy Optimizer!")
-        data = pd.read_csv('all_stocks_5yr.csv')
-        trend_df = analyze_all_companies(data)
-        st.write(trend_df.to_html(escape=False, index=False), unsafe_allow_html=True)
+        home_page()
     
     elif selected_tab == "Data Exploration":
         data_exploration()
@@ -216,6 +191,24 @@ def main():
     
     elif selected_tab == "Performance Metrics":
         performance_metrics()
+
+def home_page():
+    st.subheader("Stock Trends Overview")
+    data = pd.read_csv('all_stocks_5yr.csv')
+    trends = []
+
+    for stock in data['Name'].unique():
+        stock_df = data_prep(data, stock)
+        start_price = stock_df['close'].iloc[0]
+        end_price = stock_df['close'].iloc[-1]
+        trend = 'Upward' if end_price > start_price else 'Downward'
+        trends.append([stock, start_price, end_price, trend])
+
+    trends_df = pd.DataFrame(trends, columns=['Stock', 'Start Price', 'End Price', 'Trend'])
+    trends_df['Trend Color'] = trends_df['Trend'].apply(lambda x: 'red' if x == 'Downward' else 'green')
+    trends_df_styled = trends_df.style.apply(lambda x: ['color: {}'.format(color) for color in x['Trend Color']], axis=1)
+    
+    st.write(trends_df_styled)
 
 def data_exploration():
     data = pd.read_csv('all_stocks_5yr.csv')
@@ -236,23 +229,25 @@ def show_stock_trend(stock, stock_df):
         
         trend_note = ''
         if stock_df['close'].iloc[-1] > stock_df['close'].iloc[0]:
-            trend_note = '<span style="color:green;">Stock is on a solid upward trend. Investing here might be profitable.</span>'
+            trend_note = 'Stock is on a solid upward trend. Investing here might be profitable.'
         else:
-            trend_note = '<span style="color:red;">Stock does not appear to be in a solid uptrend. Better not to invest here; instead, pick a different stock.</span>'
+            trend_note = 'Stock does not appear to be in a solid uptrend. Better not to invest here; instead, pick a different stock.'
 
-        st.markdown(f'<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> {trend_note}</p>', unsafe_allow_html=True)
+        st.markdown(f'<b><p style="font-family:Play; color:{"red" if stock_df["close"].iloc[-1] <= stock_df["close"].iloc[0] else "cyan"}; font-size: 20px;">NOTE:<br> {trend_note}</p>', unsafe_allow_html=True)
 
 def strategy_simulation():
+    st.sidebar.subheader("Choose Company Stocks")
+    data = pd.read_csv('all_stocks_5yr.csv')
+    stock = st.sidebar.selectbox("Choose Company Stocks", list(data['Name'].unique()), index=0)
+    
     st.sidebar.subheader("Enter Your Available Initial Investment Fund")
     invest = st.sidebar.slider('Select a range of values', 1000, 1000000)
+    
     if st.sidebar.button("Calculate", key=2):
-        data = pd.read_csv('all_stocks_5yr.csv')
-        stock = st.sidebar.selectbox("Choose Company Stocks", list(data['Name'].unique()), index=0)
         stock_df = data_prep(data, stock)
-        
         num_episodes = 50  # Number of episodes for training
         net_worth = test_stock(stock_df, invest, num_episodes)
-        plot_net_worth(net_worth)
+        plot_net_worth(net_worth, stock_df['close'].iloc[0], stock_df['close'].iloc[-1])
         metrics = calculate_performance_metrics([invest] + net_worth, invest)
         display_performance_metrics(metrics)
 
@@ -262,6 +257,7 @@ def performance_metrics():
 
 if __name__ == '__main__':
     main()
+
 
 
 

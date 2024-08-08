@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 import random
 from collections import deque
+from time import time
 
 # Define DQN Model
 class DQN(nn.Module):
@@ -41,25 +42,22 @@ memory = deque(maxlen=10000)
 batch_size = 64
 update_target_every = 10
 
-# Cache the data preparation function
 @st.cache_data
 def data_prep(data, name):
     df = pd.DataFrame(data[data['Name'] == name])
     df.dropna(inplace=True)
     df.reset_index(drop=True, inplace=True)
-    df['5day_MA'] = df['close'].rolling(5).mean()
-    df['1day_MA'] = df['close'].rolling(1).mean()
-    df['5day_MA'][:4] = 0
+    df['5day_MA'] = df['close'].rolling(5).mean().fillna(0)
+    df['1day_MA'] = df['close'].rolling(1).mean().fillna(0)
     return df
 
-# Cache the state representation function
+@st.cache_data
 def get_state(data, t):
     long_ma = data['5day_MA'].iloc[t]
     short_ma = data['1day_MA'].iloc[t]
     cash_in_hand = 1 if t == 1 else 0
     return np.array([long_ma, short_ma, cash_in_hand])
 
-# Experience Replay
 def remember(state, action, reward, next_state, done):
     memory.append((state, action, reward, next_state, done))
 
@@ -98,16 +96,14 @@ def replay():
 def update_target_network():
     target_dqn.load_state_dict(dqn.state_dict())
 
-def trade_t(num_of_stocks, port_value, current_price):
-    return 1 if port_value > current_price else 0
-
 def test_stock(stocks_test, initial_investment, num_episodes):
     global epsilon
+    net_worth = []
     for episode in range(num_episodes):
         state = get_state(stocks_test, 0)
         total_reward = 0
         num_stocks = 0
-        net_worth = initial_investment
+        current_net_worth = initial_investment
 
         for t in range(len(stocks_test) - 1):
             action = next_act(state, epsilon, output_dim)
@@ -117,11 +113,11 @@ def test_stock(stocks_test, initial_investment, num_episodes):
             close_price = stocks_test['close'].iloc[t]
             if action == 0:  # Buy
                 num_stocks += 1
-                net_worth -= close_price
+                current_net_worth -= close_price
                 reward = -close_price
             elif action == 1:  # Sell
                 num_stocks -= 1
-                net_worth += close_price
+                current_net_worth += close_price
                 reward = close_price
 
             if num_stocks < 0:
@@ -135,6 +131,7 @@ def test_stock(stocks_test, initial_investment, num_episodes):
             if done:
                 break
 
+        net_worth.append(current_net_worth)
         epsilon = max(epsilon_end, epsilon_decay * epsilon)
         replay()
         if episode % update_target_every == 0:
@@ -142,17 +139,15 @@ def test_stock(stocks_test, initial_investment, num_episodes):
 
     return net_worth
 
-# Function to plot net worth
 def plot_net_worth(net_worth, initial_price, final_price):
     net_worth_df = pd.DataFrame(net_worth, columns=['value'])
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=net_worth_df.index, y=net_worth_df['value'], mode='lines', name='Portfolio Value', line=dict(color='cyan', width=2)))
     fig.update_layout(title='Change in Portfolio Value Day by Day', xaxis_title='Number of Days since Feb 2013', yaxis_title='Value ($)')
     st.plotly_chart(fig, use_container_width=True)
-    st.markdown(f'<b><p style="font-family:Play; color:Cyan; font-size: 20px;">Start Price: ${initial_price}, End Price: ${final_price}</p>', unsafe_allow_html=True)
+    st.markdown(f'<b><p style="font-family:Play; color:Cyan; font-size: 20px;">Start Price: ${initial_price:.2f}, End Price: ${final_price:.2f}</p>', unsafe_allow_html=True)
     st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> Increase in your net worth as a result of a model decision.</p>', unsafe_allow_html=True)
 
-# Function to calculate performance metrics
 def calculate_performance_metrics(net_worth, initial_investment):
     net_worth = np.array(net_worth)
     returns = (net_worth[-1] - initial_investment) / initial_investment
@@ -168,7 +163,6 @@ def calculate_performance_metrics(net_worth, initial_investment):
         "Sharpe Ratio": sharpe_ratio
     }
 
-# Function to display performance metrics
 def display_performance_metrics(metrics):
     st.write("### Performance Metrics")
     for key, value in metrics.items():
@@ -195,20 +189,22 @@ def main():
 def home_page():
     st.subheader("Stock Trends Overview")
     data = pd.read_csv('all_stocks_5yr.csv')
-    trends = []
-
-    for stock in data['Name'].unique():
-        stock_df = data_prep(data, stock)
+    
+    # Precompute trends for efficiency
+    def get_trend(stock_df):
         start_price = stock_df['close'].iloc[0]
         end_price = stock_df['close'].iloc[-1]
-        trend = 'Upward' if end_price > start_price else 'Downward'
-        trends.append([stock, start_price, end_price, trend])
+        return 'Upward' if end_price > start_price else 'Downward', start_price, end_price
 
+    trends = []
+    for stock in data['Name'].unique():
+        stock_df = data_prep(data, stock)
+        trend, start_price, end_price = get_trend(stock_df)
+        trends.append([stock, start_price, end_price, trend])
+    
     trends_df = pd.DataFrame(trends, columns=['Stock', 'Start Price', 'End Price', 'Trend'])
     trends_df['Trend Color'] = trends_df['Trend'].apply(lambda x: 'red' if x == 'Downward' else 'green')
-    trends_df_styled = trends_df.style.apply(lambda x: ['color: {}'.format(color) for color in x['Trend Color']], axis=1)
-    
-    st.write(trends_df_styled)
+    st.write(trends_df.style.apply(lambda x: ['color: {}'.format(color) for color in x['Trend Color']], axis=1))
 
 def data_exploration():
     data = pd.read_csv('all_stocks_5yr.csv')
@@ -227,12 +223,7 @@ def show_stock_trend(stock, stock_df):
         fig.update_layout(title='Stock Trend of ' + stock, xaxis_title='Date', yaxis_title='Price ($)')
         st.plotly_chart(fig, use_container_width=True)
         
-        trend_note = ''
-        if stock_df['close'].iloc[-1] > stock_df['close'].iloc[0]:
-            trend_note = 'Stock is on a solid upward trend. Investing here might be profitable.'
-        else:
-            trend_note = 'Stock does not appear to be in a solid uptrend. Better not to invest here; instead, pick a different stock.'
-
+        trend_note = 'Stock is on a solid upward trend. Investing here might be profitable.' if stock_df['close'].iloc[-1] > stock_df['close'].iloc[0] else 'Stock does not appear to be in a solid uptrend. Better not to invest here; instead, pick a different stock.'
         st.markdown(f'<b><p style="font-family:Play; color:{"red" if stock_df["close"].iloc[-1] <= stock_df["close"].iloc[0] else "cyan"}; font-size: 20px;">NOTE:<br> {trend_note}</p>', unsafe_allow_html=True)
 
 def strategy_simulation():
@@ -243,7 +234,7 @@ def strategy_simulation():
     st.sidebar.subheader("Enter Your Available Initial Investment Fund")
     invest = st.sidebar.slider('Select a range of values', 1000, 1000000)
     
-    if st.sidebar.button("Calculate", key=2):
+    if stock != "<Select Names>" and st.sidebar.button("Calculate", key=2):
         stock_df = data_prep(data, stock)
         num_episodes = 50  # Number of episodes for training
         net_worth = test_stock(stock_df, invest, num_episodes)

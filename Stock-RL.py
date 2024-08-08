@@ -50,6 +50,9 @@ def data_prep(data, name):
     df['5day_MA'] = df['close'].rolling(5).mean()
     df['1day_MA'] = df['close'].rolling(1).mean()
     df['5day_MA'][:4] = 0
+    
+    # Add a column for the number of days since the start
+    df['days_since_start'] = (df['date'] - df['date'].min()).dt.days
     return df
 
 # Cache the state representation function
@@ -149,13 +152,12 @@ def test_stock(stocks_test, initial_investment, num_episodes):
 # Function to plot net worth
 def plot_net_worth(net_worth, stock_df):
     net_worth_df = pd.DataFrame(net_worth, columns=['value'])
-    
-    # Number of days since start
-    days = list(range(len(net_worth)))
-    
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=days, y=net_worth_df['value'], mode='lines', name='Portfolio Value', line=dict(color='cyan', width=2)))
-    fig.update_layout(title='Change in Portfolio Value Over Time', xaxis_title='Number of Days Since Start', yaxis_title='Value ($)')
+    
+    # Update x-axis to be the number of days since start
+    fig.add_trace(go.Scatter(x=stock_df['days_since_start'], y=net_worth_df['value'], mode='lines', name='Portfolio Value', line=dict(color='cyan', width=2)))
+    
+    fig.update_layout(title='Change in Portfolio Value Day by Day', xaxis_title='Number of Days Since Start', yaxis_title='Value ($)')
     st.plotly_chart(fig, use_container_width=True)
     
     start_price = stock_df['close'].iloc[0]
@@ -165,7 +167,6 @@ def plot_net_worth(net_worth, stock_df):
     st.write(f"**End Price:** ${end_price:.2f}")
     
     st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> Increase in your net worth as a result of a model decision.</p>', unsafe_allow_html=True)
-
 
 # Function to calculate performance metrics
 def calculate_performance_metrics(net_worth, initial_investment):
@@ -238,8 +239,8 @@ def data_exploration():
 def show_stock_trend(stock, stock_df):
     if st.sidebar.button("Show Stock Trend", key=1):
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Stock_Trend', line=dict(color='cyan', width=2)))
-        fig.update_layout(title='Stock Trend of ' + stock, xaxis_title='Date', yaxis_title='Price ($)')
+        fig.add_trace(go.Scatter(x=stock_df['days_since_start'], y=stock_df['close'], mode='lines', name='Stock_Trend', line=dict(color='cyan', width=2)))
+        fig.update_layout(title='Stock Trend of ' + stock, xaxis_title='Number of Days Since Start', yaxis_title='Price ($)')
         st.plotly_chart(fig, use_container_width=True)
         
         trend_note = ''
@@ -258,10 +259,10 @@ def show_upward_downward_details(stock_df):
     downward_moves = stock_df[stock_df['close'] < stock_df['open']]
 
     st.write("### Upward Moves")
-    st.write(upward_moves[['date', 'open', 'close']])
+    st.write(upward_moves[['days_since_start', 'open', 'close']])
 
     st.write("### Downward Moves")
-    st.write(downward_moves[['date', 'open', 'close']])
+    st.write(downward_moves[['days_since_start', 'open', 'close']])
 
 def strategy_simulation():
     data = pd.read_csv('all_stocks_5yr.csv')

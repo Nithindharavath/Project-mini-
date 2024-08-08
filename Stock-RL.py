@@ -149,9 +149,13 @@ def test_stock(stocks_test, initial_investment, num_episodes):
 # Function to plot net worth
 def plot_net_worth(net_worth, stock_df):
     net_worth_df = pd.DataFrame(net_worth, columns=['value'])
+    
+    # Number of days since start
+    days = list(range(len(net_worth)))
+    
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=stock_df['date'], y=net_worth_df['value'], mode='lines', name='Portfolio Value', line=dict(color='cyan', width=2)))
-    fig.update_layout(title='Change in Portfolio Value Day by Day', xaxis_title='Date', yaxis_title='Value ($)')
+    fig.add_trace(go.Scatter(x=days, y=net_worth_df['value'], mode='lines', name='Portfolio Value', line=dict(color='cyan', width=2)))
+    fig.update_layout(title='Change in Portfolio Value Over Time', xaxis_title='Number of Days Since Start', yaxis_title='Value ($)')
     st.plotly_chart(fig, use_container_width=True)
     
     start_price = stock_df['close'].iloc[0]
@@ -161,6 +165,7 @@ def plot_net_worth(net_worth, stock_df):
     st.write(f"**End Price:** ${end_price:.2f}")
     
     st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> Increase in your net worth as a result of a model decision.</p>', unsafe_allow_html=True)
+
 
 # Function to calculate performance metrics
 def calculate_performance_metrics(net_worth, initial_investment):

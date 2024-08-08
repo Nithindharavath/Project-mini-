@@ -8,13 +8,13 @@ import torch.optim as optim
 import random
 from collections import deque
 
-# DQN Model
+# Define DQN Model
 class DQN(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(DQN, self).__init__()
-        self.fc1 = nn.Linear(input_dim, 128)
-        self.fc2 = nn.Linear(128, 128)
-        self.fc3 = nn.Linear(128, output_dim)
+        self.fc1 = nn.Linear(input_dim, 64)
+        self.fc2 = nn.Linear(64, 64)
+        self.fc3 = nn.Linear(64, output_dim)
 
     def forward(self, x):
         x = torch.relu(self.fc1(x))
@@ -23,8 +23,8 @@ class DQN(nn.Module):
         return x
 
 # Initialize DQN
-input_dim = 3  # State representation size
-output_dim = 3  # Number of actions
+input_dim = 3  # Number of state features
+output_dim = 3  # Number of actions: Buy, Sell, Hold
 dqn = DQN(input_dim, output_dim)
 target_dqn = DQN(input_dim, output_dim)
 target_dqn.load_state_dict(dqn.state_dict())
@@ -39,6 +39,7 @@ epsilon_decay = 0.995
 epsilon = epsilon_start
 memory = deque(maxlen=10000)
 batch_size = 64
+update_target_every = 10
 
 # Cache the data preparation function
 @st.cache_data
@@ -136,7 +137,8 @@ def test_stock(stocks_test, initial_investment, num_episodes):
 
         epsilon = max(epsilon_end, epsilon_decay * epsilon)
         replay()
-        update_target_network()
+        if episode % update_target_every == 0:
+            update_target_network()
 
     return net_worth
 
@@ -208,7 +210,7 @@ def show_stock_trend(stock, stock_df):
         st.plotly_chart(fig, use_container_width=True)
         
         trend_note = ''
-        if stock_df.iloc[-1]['close'] > stock_df.iloc[0]['close']:
+        if stock_df['close'].iloc[-1] > stock_df['close'].iloc[0]:
             trend_note = 'Stock is on a solid upward trend. Investing here might be profitable.'
         else:
             trend_note = 'Stock does not appear to be in a solid uptrend. Better not to invest here; instead, pick a different stock.'
@@ -222,4 +224,17 @@ def strategy_simulation():
         data = pd.read_csv('all_stocks_5yr.csv')
         stock = st.sidebar.selectbox("Choose Company Stocks", list(data['Name'].unique()), index=0)
         stock_df = data_prep(data, stock)
-        net_worth = test_stock
+        
+        num_episodes = 50  # Number of episodes for training
+        net_worth = test_stock(stock_df, invest, num_episodes)
+        plot_net_worth(net_worth)
+        metrics = calculate_performance_metrics([invest] + net_worth, invest)
+        display_performance_metrics(metrics)
+
+def performance_metrics():
+    st.write("### Performance Metrics Section")
+    st.write("Please select a stock and run the strategy simulation to view performance metrics.")
+
+if __name__ == '__main__':
+    main()
+

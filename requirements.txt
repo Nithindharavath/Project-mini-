@@ -2,7 +2,7 @@ plotly
 numpy
 streamlit
 pandas
-
+torch
 
 
 

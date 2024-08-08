@@ -2,7 +2,7 @@ plotly
 numpy
 streamlit
 pandas
-torch==2.0.0
+torch
 
 
 

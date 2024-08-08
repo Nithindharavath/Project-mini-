@@ -191,8 +191,7 @@ def main():
     selected_tab = st.sidebar.selectbox("Select a tab", tabs)
 
     if selected_tab == "Home":
-        st.write("Welcome to the Stock Trading Strategy Optimizer!")
-        st.write("Select a tab to get started.")
+        home_page()
     
     elif selected_tab == "Data Exploration":
         data_exploration()
@@ -202,6 +201,24 @@ def main():
     
     elif selected_tab == "Performance Metrics":
         performance_metrics()
+
+def home_page():
+    data = pd.read_csv('all_stocks_5yr.csv')
+    names = list(data['Name'].unique())
+    names.insert(0, "<Select Names>")
+    
+    # Determine the trend for each company
+    trends = []
+    for name in names[1:]:
+        df = data_prep(data, name)
+        final_price = df['close'].iloc[-1]
+        initial_price = df['close'].iloc[0]
+        trend = "Upward" if final_price > initial_price else "Downward"
+        trends.append({"Company": name, "Trend": trend})
+
+    trends_df = pd.DataFrame(trends)
+    st.write("### Company Trends")
+    st.write(trends_df)
 
 def data_exploration():
     data = pd.read_csv('all_stocks_5yr.csv')
@@ -243,6 +260,9 @@ def show_upward_downward_details(stock_df):
 
 def strategy_simulation():
     data = pd.read_csv('all_stocks_5yr.csv')
+    data['date'] = pd.to_datetime(data['date'])
+    data = data[(data['date'].dt.year >= 2013) & (data['date'].dt.year <= 2018)]
+    
     stock = st.sidebar.selectbox("Choose Company Stocks", list(data['Name'].unique()), index=0)
     
     if stock:
@@ -264,3 +284,4 @@ def performance_metrics():
 
 if __name__ == '__main__':
     main()
+

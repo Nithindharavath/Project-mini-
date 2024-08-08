@@ -103,8 +103,8 @@ def trade_t(num_of_stocks, port_value, current_price):
 
 def test_stock(stocks_test, initial_investment, num_episodes):
     global epsilon
-    net_worth_history = []
-    
+    net_worth_history = [initial_investment]
+
     for episode in range(num_episodes):
         state = get_state(stocks_test, 0)
         total_reward = 0
@@ -143,16 +143,23 @@ def test_stock(stocks_test, initial_investment, num_episodes):
             update_target_network()
 
         net_worth_history.append(net_worth)
-    
+
     return net_worth_history
 
 # Function to plot net worth
-def plot_net_worth(net_worth):
+def plot_net_worth(net_worth, stock_df):
     net_worth_df = pd.DataFrame(net_worth, columns=['value'])
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=net_worth_df.index, y=net_worth_df['value'], mode='lines', name='Portfolio Value', line=dict(color='cyan', width=2)))
-    fig.update_layout(title='Change in Portfolio Value Day by Day', xaxis_title='Number of Days since Feb 2013', yaxis_title='Value ($)')
+    fig.add_trace(go.Scatter(x=stock_df['date'], y=net_worth_df['value'], mode='lines', name='Portfolio Value', line=dict(color='cyan', width=2)))
+    fig.update_layout(title='Change in Portfolio Value Day by Day', xaxis_title='Date', yaxis_title='Value ($)')
     st.plotly_chart(fig, use_container_width=True)
+    
+    start_price = stock_df['close'].iloc[0]
+    end_price = stock_df['close'].iloc[-1]
+    
+    st.write(f"**Start Price:** ${start_price:.2f}")
+    st.write(f"**End Price:** ${end_price:.2f}")
+    
     st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> Increase in your net worth as a result of a model decision.</p>', unsafe_allow_html=True)
 
 # Function to calculate performance metrics
@@ -177,15 +184,6 @@ def display_performance_metrics(metrics):
     for key, value in metrics.items():
         st.write(f"**{key}:** {value:.2f}")
 
-# Function to display the table of stock movements
-def show_stock_movements(data):
-    data['Movement'] = data.groupby('Name')['close'].transform(lambda x: x.pct_change()).fillna(0)
-    data['Trend'] = data['Movement'].apply(lambda x: 'Upward' if x > 0 else 'Downward')
-    trend_summary = data.groupby(['Name', 'Trend']).size().reset_index(name='Count')
-    trend_summary_pivot = trend_summary.pivot(index='Name', columns='Trend', values='Count').fillna(0).reset_index()
-    st.write("### Stock Movements Summary")
-    st.dataframe(trend_summary_pivot)
-
 def main():
     st.title("Optimizing Stock Trading Strategy With Reinforcement Learning")
     
@@ -193,8 +191,8 @@ def main():
     selected_tab = st.sidebar.selectbox("Select a tab", tabs)
 
     if selected_tab == "Home":
-        data = pd.read_csv('all_stocks_5yr.csv')
-        show_stock_movements(data)
+        st.write("Welcome to the Stock Trading Strategy Optimizer!")
+        st.write("Select a tab to get started.")
     
     elif selected_tab == "Data Exploration":
         data_exploration()
@@ -216,36 +214,57 @@ def data_exploration():
         show_stock_trend(stock, stock_df)
 
 def show_stock_trend(stock, stock_df):
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Stock Trend', line=dict(color='cyan', width=2)))
-    fig.update_layout(title='Stock Trend of ' + stock, xaxis_title='Date', yaxis_title='Price ($)')
-    st.plotly_chart(fig, use_container_width=True)
+    if st.sidebar.button("Show Stock Trend", key=1):
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Stock_Trend', line=dict(color='cyan', width=2)))
+        fig.update_layout(title='Stock Trend of ' + stock, xaxis_title='Date', yaxis_title='Price ($)')
+        st.plotly_chart(fig, use_container_width=True)
+        
+        trend_note = ''
+        if stock_df['close'].iloc[-1] > stock_df['close'].iloc[0]:
+            trend_note = 'Stock is on a solid upward trend. Investing here might be profitable.'
+        else:
+            trend_note = 'Stock does not appear to be in a solid uptrend. Better not to invest here; instead, pick a different stock.'
+
+        st.markdown(f'<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> {trend_note}</p>', unsafe_allow_html=True)
+        
+        # Show upward and downward movements
+        show_upward_downward_details(stock_df)
+
+def show_upward_downward_details(stock_df):
+    upward_moves = stock_df[stock_df['close'] > stock_df['open']]
+    downward_moves = stock_df[stock_df['close'] < stock_df['open']]
+
+    st.write("### Upward Moves")
+    st.write(upward_moves[['date', 'open', 'close']])
+
+    st.write("### Downward Moves")
+    st.write(downward_moves[['date', 'open', 'close']])
 
 def strategy_simulation():
     data = pd.read_csv('all_stocks_5yr.csv')
-    names = list(data['Name'].unique())
-    names.insert(0, "<Select Names>")
+    stock = st.sidebar.selectbox("Choose Company Stocks", list(data['Name'].unique()), index=0)
     
-    stock = st.sidebar.selectbox("Choose Company Stocks", names, index=0)
-    if stock != "<Select Names>":
+    if stock:
         stock_df = data_prep(data, stock)
-        num_episodes = st.sidebar.slider("Number of Episodes", min_value=1, max_value=100, value=10)
-        initial_investment = st.sidebar.number_input("Initial Investment ($)", min_value=1000, value=10000)
+
+        st.sidebar.subheader("Enter Your Available Initial Investment Fund")
+        invest = st.sidebar.slider('Select a range of values', 1000, 1000000)
         
-        if st.sidebar.button("Run Simulation"):
-            with st.spinner("Running Simulation..."):
-                net_worth = test_stock(stock_df, initial_investment, num_episodes)
-                plot_net_worth(net_worth)
-                metrics = calculate_performance_metrics(net_worth, initial_investment)
-                display_performance_metrics(metrics)
+        if st.sidebar.button("Calculate", key=2):
+            num_episodes = 50  # Number of episodes for training
+            net_worth_history = test_stock(stock_df, invest, num_episodes)
+            plot_net_worth(net_worth_history, stock_df)
+            metrics = calculate_performance_metrics(net_worth_history, invest)
+            display_performance_metrics(metrics)
 
 def performance_metrics():
-    # Placeholder function for performance metrics tab
-    st.write("### Performance Metrics")
-    st.write("Performance metrics will be displayed here after simulation.")
+    st.write("### Performance Metrics Section")
+    st.write("Please select a stock and run the strategy simulation to view performance metrics.")
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
+
 
 
 

@@ -2,10 +2,46 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-import pickle as pkl
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import random
+from collections import deque
+
+# DQN Model
+class DQN(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super(DQN, self).__init__()
+        self.fc1 = nn.Linear(input_dim, 128)
+        self.fc2 = nn.Linear(128, 128)
+        self.fc3 = nn.Linear(128, output_dim)
+
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
+# Initialize DQN
+input_dim = 3  # State representation size
+output_dim = 3  # Number of actions
+dqn = DQN(input_dim, output_dim)
+target_dqn = DQN(input_dim, output_dim)
+target_dqn.load_state_dict(dqn.state_dict())
+optimizer = optim.Adam(dqn.parameters())
+loss_fn = nn.MSELoss()
+
+# Hyperparameters
+gamma = 0.99
+epsilon_start = 1.0
+epsilon_end = 0.1
+epsilon_decay = 0.995
+epsilon = epsilon_start
+memory = deque(maxlen=10000)
+batch_size = 64
 
 # Cache the data preparation function
-@st.cache
+@st.cache_data
 def data_prep(data, name):
     df = pd.DataFrame(data[data['Name'] == name])
     df.dropna(inplace=True)
@@ -15,53 +51,92 @@ def data_prep(data, name):
     df['5day_MA'][:4] = 0
     return df
 
-# Cache the state calculation function
-@st.cache
-def get_state(long_ma, short_ma, t):
-    if short_ma < long_ma:
-        return (0, 1) if t == 1 else (0, 0)
-    else:
-        return (1, 1) if t == 1 else (1, 0)
+# Cache the state representation function
+def get_state(data, t):
+    long_ma = data['5day_MA'].iloc[t]
+    short_ma = data['1day_MA'].iloc[t]
+    cash_in_hand = 1 if t == 1 else 0
+    return np.array([long_ma, short_ma, cash_in_hand])
 
-# Cache the trade determination function
-@st.cache
+# Experience Replay
+def remember(state, action, reward, next_state, done):
+    memory.append((state, action, reward, next_state, done))
+
+def next_act(state, epsilon, action_dim):
+    if np.random.rand() < epsilon:
+        return np.random.randint(action_dim)
+    else:
+        state_tensor = torch.tensor(state, dtype=torch.float).unsqueeze(0)
+        with torch.no_grad():
+            q_values = dqn(state_tensor)
+        return torch.argmax(q_values).item()
+
+def replay():
+    if len(memory) < batch_size:
+        return
+    
+    batch = random.sample(memory, batch_size)
+    states, actions, rewards, next_states, dones = zip(*batch)
+
+    states = torch.tensor(states, dtype=torch.float)
+    actions = torch.tensor(actions, dtype=torch.long)
+    rewards = torch.tensor(rewards, dtype=torch.float)
+    next_states = torch.tensor(next_states, dtype=torch.float)
+    dones = torch.tensor(dones, dtype=torch.float)
+
+    q_values = dqn(states).gather(1, actions.unsqueeze(1)).squeeze(1)
+    next_q_values = target_dqn(next_states).max(1)[0]
+    target_q_values = rewards + gamma * next_q_values * (1 - dones)
+
+    loss = loss_fn(q_values, target_q_values)
+
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+
+def update_target_network():
+    target_dqn.load_state_dict(dqn.state_dict())
+
 def trade_t(num_of_stocks, port_value, current_price):
     return 1 if port_value > current_price else 0
 
-# Cache the next action function
-@st.cache
-def next_act(state, qtable, epsilon, action=3):
-    return np.random.randint(action) if np.random.rand() < epsilon else np.argmax(qtable[state])
+def test_stock(stocks_test, initial_investment, num_episodes):
+    global epsilon
+    for episode in range(num_episodes):
+        state = get_state(stocks_test, 0)
+        total_reward = 0
+        num_stocks = 0
+        net_worth = initial_investment
 
-# Cache the stock testing function
-@st.cache
-def test_stock(stocks_test, q_table, invest):
-    num_stocks = 0
-    epsilon = 0
-    net_worth = [invest]
-    np.random.seed()
+        for t in range(len(stocks_test) - 1):
+            action = next_act(state, epsilon, output_dim)
+            next_state = get_state(stocks_test, t + 1)
+            reward = 0
 
-    for dt in range(len(stocks_test)):
-        long_ma = stocks_test.iloc[dt]['5day_MA']
-        short_ma = stocks_test.iloc[dt]['1day_MA']
-        close_price = stocks_test.iloc[dt]['close']
-        t = trade_t(num_stocks, net_worth[-1], close_price)
-        state = get_state(long_ma, short_ma, t)
-        action = next_act(state, q_table, epsilon)
+            close_price = stocks_test['close'].iloc[t]
+            if action == 0:  # Buy
+                num_stocks += 1
+                net_worth -= close_price
+                reward = -close_price
+            elif action == 1:  # Sell
+                num_stocks -= 1
+                net_worth += close_price
+                reward = close_price
 
-        if action == 0:  # Buy
-            num_stocks += 1
-            net_worth.append(np.round(net_worth[-1] - close_price, 1))
-        elif action == 1:  # Sell
-            num_stocks -= 1
-            net_worth.append(np.round(net_worth[-1] + close_price, 1))
-        elif action == 2:  # Hold
-            net_worth.append(np.round(net_worth[-1], 1))
+            if num_stocks < 0:
+                num_stocks = 0
 
-        try:
-            next_state = get_state(stocks_test.iloc[dt + 1]['5day_MA'], stocks_test.iloc[dt + 1]['1day_MA'], t)
-        except:
-            break
+            done = t == len(stocks_test) - 2
+            total_reward += reward
+            remember(state, action, reward, next_state, done)
+            state = next_state
+
+            if done:
+                break
+
+        epsilon = max(epsilon_end, epsilon_decay * epsilon)
+        replay()
+        update_target_network()
 
     return net_worth
 
@@ -96,7 +171,6 @@ def display_performance_metrics(metrics):
     for key, value in metrics.items():
         st.write(f"**{key}:** {value:.2f}")
 
-# Main application function
 def main():
     st.title("Optimizing Stock Trading Strategy With Reinforcement Learning")
     
@@ -132,7 +206,13 @@ def show_stock_trend(stock, stock_df):
         fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Stock_Trend', line=dict(color='cyan', width=2)))
         fig.update_layout(title='Stock Trend of ' + stock, xaxis_title='Date', yaxis_title='Price ($)')
         st.plotly_chart(fig, use_container_width=True)
-        trend_note = 'Stock is on a solid upward trend. Investing here might be profitable.' if stock_df.iloc[500]['close'] > stock_df.iloc[0]['close'] else 'Stock does not appear to be in a solid uptrend. Better not to invest here; instead, pick a different stock.'
+        
+        trend_note = ''
+        if stock_df.iloc[-1]['close'] > stock_df.iloc[0]['close']:
+            trend_note = 'Stock is on a solid upward trend. Investing here might be profitable.'
+        else:
+            trend_note = 'Stock does not appear to be in a solid uptrend. Better not to invest here; instead, pick a different stock.'
+
         st.markdown(f'<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> {trend_note}</p>', unsafe_allow_html=True)
 
 def strategy_simulation():
@@ -142,15 +222,4 @@ def strategy_simulation():
         data = pd.read_csv('all_stocks_5yr.csv')
         stock = st.sidebar.selectbox("Choose Company Stocks", list(data['Name'].unique()), index=0)
         stock_df = data_prep(data, stock)
-        q_table = pkl.load(open('pickl.pkl', 'rb'))
-        net_worth = test_stock(stock_df, q_table, invest)
-        plot_net_worth(net_worth)
-        metrics = calculate_performance_metrics(net_worth, invest)
-        display_performance_metrics(metrics)
-
-def performance_metrics():
-    st.write("### Performance Metrics Section")
-    st.write("Please select a stock and run the strategy simulation to view performance metrics.")
-
-if __name__ == '__main__':
-    main()
+        net_worth = test_stock

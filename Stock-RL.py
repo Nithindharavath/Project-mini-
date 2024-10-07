@@ -2,230 +2,93 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import random
-from collections import deque
 
-# Define DQN Model
-class DQN(nn.Module):
-    def __init__(self, input_dim, output_dim):
-        super(DQN, self).__init__()
-        self.fc1 = nn.Linear(input_dim, 64)
-        self.fc2 = nn.Linear(64, 64)
-        self.fc3 = nn.Linear(64, output_dim)
-
-    def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
-
-# Initialize DQN
-input_dim = 3  # Number of state features
-output_dim = 3  # Number of actions: Buy, Sell, Hold
-dqn = DQN(input_dim, output_dim)
-target_dqn = DQN(input_dim, output_dim)
-target_dqn.load_state_dict(dqn.state_dict())
-optimizer = optim.Adam(dqn.parameters())
-loss_fn = nn.MSELoss()
-
-# Hyperparameters
-gamma = 0.99
-epsilon_start = 1.0
-epsilon_end = 0.1
-epsilon_decay = 0.995
-epsilon = epsilon_start
-memory = deque(maxlen=10000)
-batch_size = 64
-update_target_every = 10
-
-# Cache the data preparation function
+# Cache the data preparation function for optimization
 @st.cache_data
 def data_prep(data, name):
-    df = pd.DataFrame(data[data['Name'] == name])
+    df = data[data['Name'] == name].copy()
     df.dropna(inplace=True)
     df.reset_index(drop=True, inplace=True)
     df['5day_MA'] = df['close'].rolling(5).mean()
     df['1day_MA'] = df['close'].rolling(1).mean()
-    df['5day_MA'][:4] = 0
+    df['5day_MA'][:4] = 0  # Initialize first few values as 0 for simplicity
     return df
 
-# Cache the state representation function
-def get_state(data, t):
-    long_ma = data['5day_MA'].iloc[t]
-    short_ma = data['1day_MA'].iloc[t]
-    cash_in_hand = 1 if t == 1 else 0
-    return np.array([long_ma, short_ma, cash_in_hand])
-
-# Experience Replay
-def remember(state, action, reward, next_state, done):
-    memory.append((state, action, reward, next_state, done))
-
-def next_act(state, epsilon, action_dim):
-    if np.random.rand() < epsilon:
-        return np.random.randint(action_dim)
-    else:
-        state_tensor = torch.tensor(state, dtype=torch.float).unsqueeze(0)
-        with torch.no_grad():
-            q_values = dqn(state_tensor)
-        return torch.argmax(q_values).item()
-
-def replay():
-    if len(memory) < batch_size:
-        return
-    
-    batch = random.sample(memory, batch_size)
-    states, actions, rewards, next_states, dones = zip(*batch)
-
-    states = torch.tensor(states, dtype=torch.float)
-    actions = torch.tensor(actions, dtype=torch.long)
-    rewards = torch.tensor(rewards, dtype=torch.float)
-    next_states = torch.tensor(next_states, dtype=torch.float)
-    dones = torch.tensor(dones, dtype=torch.float)
-
-    q_values = dqn(states).gather(1, actions.unsqueeze(1)).squeeze(1)
-    next_q_values = target_dqn(next_states).max(1)[0]
-    target_q_values = rewards + gamma * next_q_values * (1 - dones)
-
-    loss = loss_fn(q_values, target_q_values)
-
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
-
-def update_target_network():
-    target_dqn.load_state_dict(dqn.state_dict())
-
-def trade_t(num_of_stocks, port_value, current_price):
-    return 1 if port_value > current_price else 0
-
-def test_stock(stocks_test, initial_investment, num_episodes):
-    global epsilon
-    net_worth_history = [initial_investment]
-
-    for episode in range(num_episodes):
-        state = get_state(stocks_test, 0)
-        total_reward = 0
-        num_stocks = 0
-        net_worth = initial_investment
-
-        for t in range(len(stocks_test) - 1):
-            action = next_act(state, epsilon, output_dim)
-            next_state = get_state(stocks_test, t + 1)
-            reward = 0
-
-            close_price = stocks_test['close'].iloc[t]
-            if action == 0:  # Buy
-                num_stocks += 1
-                net_worth -= close_price
-                reward = -close_price
-            elif action == 1:  # Sell
-                num_stocks -= 1
-                net_worth += close_price
-                reward = close_price
-
-            if num_stocks < 0:
-                num_stocks = 0
-
-            done = t == len(stocks_test) - 2
-            total_reward += reward
-            remember(state, action, reward, next_state, done)
-            state = next_state
-
-            if done:
-                break
-
-        epsilon = max(epsilon_end, epsilon_decay * epsilon)
-        replay()
-        if episode % update_target_every == 0:
-            update_target_network()
-
-        net_worth_history.append(net_worth)
-
-    return net_worth_history
-
-# Function to plot net worth
-def plot_net_worth(net_worth, stock_df):
-    net_worth_df = pd.DataFrame(net_worth, columns=['value'])
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=stock_df['date'], y=net_worth_df['value'], mode='lines', name='Portfolio Value', line=dict(color='cyan', width=2)))
-    fig.update_layout(title='Change in Portfolio Value Day by Day', xaxis_title='Date', yaxis_title='Value ($)')
-    st.plotly_chart(fig, use_container_width=True)
-    
-    start_price = stock_df['close'].iloc[0]
-    end_price = stock_df['close'].iloc[-1]
-    
-    st.write(f"**Start Price:** ${start_price:.2f}")
-    st.write(f"**End Price:** ${end_price:.2f}")
-    
-    st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> Increase in your net worth as a result of a model decision.</p>', unsafe_allow_html=True)
-
-# Function to display company stock details
+# Function to display stock company overview
 def company_overview():
     st.write("### Stock Company Overview")
-    
-    # Load the stock data
-    data = pd.read_csv('all_stocks_5yr.csv')
+
+    # Load stock data
+    try:
+        data = pd.read_csv('all_stocks_5yr.csv')
+        st.write("Data loaded successfully!")
+    except Exception as e:
+        st.write(f"Error loading data: {e}")
+        return
+
     stock = st.sidebar.selectbox("Choose Company Stocks", list(data['Name'].unique()), index=0)
 
     if stock:
-        stock_df = data_prep(data, stock)
+        try:
+            stock_df = data_prep(data, stock)
+            st.write("Stock data prepared!")
+        except Exception as e:
+            st.write(f"Error processing stock data: {e}")
+            return
 
-        # Display company profile (you can expand this part with more real-world data)
+        # Display company profile (Dummy data for demonstration)
         st.subheader(f"{stock} Overview")
-        st.write(f"**Sector**: Technology")
-        st.write(f"**Industry**: Software & IT Services")
-        st.write(f"**Market Cap**: $500 Billion")  # Example value
-        st.write(f"**P/E Ratio**: 30.5")  # Example value
-        st.write(f"**Dividend Yield**: 1.5%")  # Example value
+        st.write(f"**Sector**: Technology")  # Example sector
+        st.write(f"**Industry**: Software & IT Services")  # Example industry
+        st.write(f"**Market Cap**: $500 Billion")  # Example market cap
+        st.write(f"**P/E Ratio**: 30.5")  # Example P/E ratio
+        st.write(f"**Dividend Yield**: 1.5%")  # Example dividend yield
 
-        # Display historical stock performance
+        # Display stock performance details
         st.subheader("Stock Performance Overview")
         st.write(f"**52-Week High**: ${stock_df['close'].max():.2f}")
         st.write(f"**52-Week Low**: ${stock_df['close'].min():.2f}")
         st.write(f"**Current Price**: ${stock_df['close'].iloc[-1]:.2f}")
-        
-        # Plot stock trend for the selected company
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Stock Price', line=dict(color='cyan', width=2)))
-        fig.update_layout(title=f'Stock Price Trend for {stock}', xaxis_title='Date', yaxis_title='Price ($)')
-        st.plotly_chart(fig, use_container_width=True)
 
-# Modify the main function to include the new tab
+        # Plot stock trend
+        try:
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Stock Price', line=dict(color='cyan', width=2)))
+            fig.update_layout(title=f'Stock Price Trend for {stock}', xaxis_title='Date', yaxis_title='Price ($)')
+            st.plotly_chart(fig, use_container_width=True)
+        except Exception as e:
+            st.write(f"Error plotting stock data: {e}")
+
+# Function to handle home page content
+def home_page():
+    st.write("Welcome to the Stock Trading Strategy Application!")
+    st.write("This app helps you explore stock trends, simulate trading strategies using reinforcement learning, and view company stock overviews.")
+
+# Function to handle data exploration
+def data_exploration():
+    st.write("Data Exploration Page: Analyze various stock data.")
+
+# Function to handle strategy simulation (placeholder for future implementation)
+def strategy_simulation():
+    st.write("Strategy Simulation Page: Enhancing stock trading using reinforcement learning.")
+
+# Main function for the Streamlit app
 def main():
-    st.title("Enhancing Stock Trading Strategy Using Reinforcement Learning")
+    st.title("Enhancing Stock Trading Strategy using Reinforcement Learning")
     
+    # Define the tabs available in the sidebar
     tabs = ["Home", "Data Exploration", "Strategy Simulation", "Company Overview"]
     selected_tab = st.sidebar.selectbox("Select a tab", tabs)
 
     if selected_tab == "Home":
         home_page()
-    
     elif selected_tab == "Data Exploration":
         data_exploration()
-    
     elif selected_tab == "Strategy Simulation":
         strategy_simulation()
-    
     elif selected_tab == "Company Overview":
         company_overview()
 
-def home_page():
-    data = pd.read_csv('all_stocks_5yr.csv')
-    names = list(data['Name'].unique())
-    names.insert(0, "<Select Names>")
-    
-    # Determine the trend for each company
-    trends = []
-    for name in names[1:]:
-        df = data_prep(data, name)
-        final_price = df['close'].iloc[-1]
-        initial_price = df['close'].iloc[0]
-        trend = "Upward" if final_price > initial_price else "Downward"
-        trends.append({"Company": name, "Trend": trend})
-
-
-
-
+# Execute the main function
+if __name__ == '__main__':
+    main()

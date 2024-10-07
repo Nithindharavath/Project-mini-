@@ -10,7 +10,7 @@ from collections import deque
 
 # Define DQN Model
 class DQN(nn.Module):
-    def __init__(self, input_dim, output_dim):  # Corrected __init__ method
+    def __init__(self, input_dim, output_dim):
         super(DQN, self).__init__()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
@@ -178,11 +178,21 @@ def calculate_performance_metrics(net_worth, initial_investment):
         "Sharpe Ratio": sharpe_ratio
     }
 
-# Function to display performance metrics
+# Function to display performance metrics as a table
 def display_performance_metrics(metrics):
     st.write("### Performance Metrics")
-    for key, value in metrics.items():
-        st.write(f"{key}:** {value:.2f}")
+    
+    # Create a DataFrame for the metrics
+    metrics_df = pd.DataFrame({
+        "Metric": ["Total Return", "Annualized Return", "Volatility", "Sharpe Ratio"],
+        "Value": [f"{metrics['Total Return']:.2f}", 
+                  f"{metrics['Annualized Return']:.2f}", 
+                  f"{metrics['Volatility']:.2f}", 
+                  f"{metrics['Sharpe Ratio']:.2f}"]
+    })
+    
+    # Display the DataFrame as a table
+    st.table(metrics_df)
 
 def main():
     st.title("Optimizing Stock Trading Strategy With Reinforcement Learning")
@@ -227,32 +237,35 @@ def data_exploration():
         stock_df = data_prep(data, stock)
         show_stock_trend(stock, stock_df)
 
-def show_stock_trend(stock, stock_df):
-    if st.sidebar.button("Show Stock Trend", key=1):
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Stock_Trend', line=dict(color='cyan', width=2)))
-        fig.update_layout(title='Stock Trend of ' + stock, xaxis_title='Date', yaxis_title='Stock Price ($)')
-        st.plotly_chart(fig, use_container_width=True)
+def show_stock_trend(stock_name, stock_df):
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Close Price', line=dict(color='blue')))
+    fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['5day_MA'], mode='lines', name='5 Day MA', line=dict(color='orange')))
+    fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['1day_MA'], mode='lines', name='1 Day MA', line=dict(color='green')))
+    
+    fig.update_layout(title=f'{stock_name} Stock Price Trend', xaxis_title='Date', yaxis_title='Price ($)')
+    st.plotly_chart(fig, use_container_width=True)
 
 def strategy_simulation():
+    st.header("Simulating Trading Strategy")
+    
     data = pd.read_csv('all_stocks_5yr.csv')
-    data['date'] = pd.to_datetime(data['date'])
-
-    # No filtering; include all available data
-    stock = st.sidebar.selectbox("Choose Company Stocks", data['Name'].unique())
-    stock_df = data_prep(data, stock)
-
-    invest = st.sidebar.number_input("Enter Your Investment Amount", min_value=1, value=1000)
-    if st.sidebar.button("Calculate", key=2):
-        num_episodes = 50  # Number of episodes for training
-        net_worth_history = test_stock(stock_df, invest, num_episodes)
+    names = list(data['Name'].unique())
+    names.insert(0, "<Select Names>")
+    
+    stock = st.selectbox("Choose Company Stocks", names, index=0)
+    if stock != "<Select Names>":
+        stock_df = data_prep(data, stock)
         
-        print("Net Worth History:", net_worth_history)  # Debugging line
-        print("Initial Investment:", invest)  # Debugging line
-        
-        metrics = calculate_performance_metrics(net_worth_history, invest)
-        display_performance_metrics(metrics)
-        plot_net_worth(net_worth_history, stock_df)
+        initial_investment = st.number_input("Enter Initial Investment ($)", value=10000, min_value=1000, step=1000)
+        num_episodes = st.number_input("Number of Episodes", value=100, min_value=1, step=1)
+
+        if st.button("Simulate Trading"):
+            net_worth = test_stock(stock_df, initial_investment, num_episodes)
+            plot_net_worth(net_worth, stock_df)
+
+            metrics = calculate_performance_metrics(net_worth, initial_investment)
+            display_performance_metrics(metrics)
 
 if __name__ == "__main__":
     main()

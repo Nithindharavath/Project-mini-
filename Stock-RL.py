@@ -149,26 +149,29 @@ def test_stock(stocks_test, initial_investment, num_episodes):
 # Function to plot net worth with a dynamic note
 def plot_net_worth(net_worth, stock_df):
     net_worth_df = pd.DataFrame(net_worth, columns=['value'])
+    
+    # Plot portfolio value over time
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=stock_df['date'], y=net_worth_df['value'], mode='lines', name='Portfolio Value', line=dict(color='cyan', width=2)))
-    fig.update_layout(title='Change in Portfolio Value Day by Day', xaxis_title='Date', yaxis_title='Value ($)')
+    fig.add_trace(go.Scatter(x=stock_df['date'], y=net_worth_df['value'], mode='lines', 
+                             name='Portfolio Value', line=dict(color='cyan', width=2)))
+    fig.update_layout(title='Change in Portfolio Value Day by Day', 
+                      xaxis_title='Date', yaxis_title='Portfolio Value ($)')
     st.plotly_chart(fig, use_container_width=True)
     
-    start_price = stock_df['close'].iloc[0]
-    end_price = stock_df['close'].iloc[-1]
+    # Get start and end net worth from the portfolio history
+    start_net_worth = net_worth[0]  # Starting portfolio value
+    end_net_worth = net_worth[-1]   # Final portfolio value
     
-    # Calculate the net worth change
-    start_net_worth = net_worth[0]
-    end_net_worth = net_worth[-1]
+    st.write(f"Start Portfolio Value: ${start_net_worth:.2f}")
+    st.write(f"End Portfolio Value: ${end_net_worth:.2f}")
     
-    st.write(f"Start Price: ${start_price:.2f}")
-    st.write(f"End Price: ${end_price:.2f}")
-    
-    # Check net worth change and display appropriate note
+    # Display a note based on net worth increase or decrease
     if end_net_worth > start_net_worth:
-        st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> Increase in your net worth as a result of model decisions.</p>', unsafe_allow_html=True)
+        st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> '
+                    'Increase in your net worth as a result of model decisions.</p>', unsafe_allow_html=True)
     else:
-        st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> Decrease in your net worth as a result of model decisions.</p>', unsafe_allow_html=True)
+        st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> '
+                    'Decrease in your net worth as a result of model decisions.</p>', unsafe_allow_html=True)
 
 
 # Function to calculate performance metrics

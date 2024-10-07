@@ -182,7 +182,7 @@ def calculate_performance_metrics(net_worth, initial_investment):
 def display_performance_metrics(metrics):
     st.write("### Performance Metrics")
     for key, value in metrics.items():
-        st.write(f"{key}: **{value:.2f}**")
+        st.write(f"{key}: **{value:.2f}")
 
 def main():
     st.title("Optimizing Stock Trading Strategy With Reinforcement Learning")
@@ -226,44 +226,46 @@ def data_exploration():
     if stock != "<Select Names>":
         stock_df = data_prep(data, stock)
         show_stock_trend(stock, stock_df)
-        show_trend_note(stock_df)
+        display_trend_note(stock_df)
 
 def show_stock_trend(stock, stock_df):
     if st.sidebar.button("Show Stock Trend", key=1):
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Stock Trend', line=dict(color='cyan', width=2)))
-        fig.update_layout(title='Stock Trend of ' + stock, xaxis_title='Date', yaxis_title='Stock Price ($)')
+        fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Stock_Trend'))
+        fig.update_layout(title=f'Stock Trend for {stock}', xaxis_title='Date', yaxis_title='Price')
         st.plotly_chart(fig, use_container_width=True)
 
-def show_trend_note(stock_df):
+def display_trend_note(stock_df):
     final_price = stock_df['close'].iloc[-1]
     initial_price = stock_df['close'].iloc[0]
-
+    
     if final_price > initial_price:
         trend_note = 'Stock is on a solid upward trend. Investing here might be profitable.'
-        st.markdown(f"<p style='color: green; font-size: 16px;'>{trend_note}</p>", unsafe_allow_html=True)
-    elif final_price < initial_price:
-        trend_note = 'Stock is on a downward trend. Proceed with caution before investing.'
-        st.markdown(f"<p style='color: red; font-size: 16px;'>{trend_note}</p>", unsafe_allow_html=True)
     else:
-        trend_note = 'Stock prices are stable. Consider other factors before investing.'
-        st.markdown(f"<p style='color: orange; font-size: 16px;'>{trend_note}</p>", unsafe_allow_html=True)
+        trend_note = 'Stock is on a downward trend. Caution is advised.'
+        
+    st.write("### Trend Note")
+    st.write(trend_note)
 
 def strategy_simulation():
-    st.subheader("Simulating Strategy")
-    initial_investment = st.number_input("Initial Investment ($)", value=10000)
-    num_episodes = st.number_input("Number of Episodes", value=10)
-
+    data = pd.read_csv('all_stocks_5yr.csv')
+    names = list(data['Name'].unique())
+    stock = st.selectbox("Choose Company Stocks", names)
+    
+    initial_investment = st.number_input("Initial Investment Amount ($)", min_value=1.0, value=1000.0, step=10.0)
     if st.button("Start Simulation"):
-        data = pd.read_csv('all_stocks_5yr.csv')
-        stock_name = st.selectbox("Select Stock for Simulation", data['Name'].unique())
-
-        stocks_test = data_prep(data, stock_name)
-        net_worth_history = test_stock(stocks_test, initial_investment, num_episodes)
-        plot_net_worth(net_worth_history, stocks_test)
+        stock_df = data_prep(data, stock)
+        
+        # Filter the DataFrame to keep only the rows from 2018 to 2023
+        stock_df['date'] = pd.to_datetime(stock_df['date'])
+        stock_df = stock_df[(stock_df['date'].dt.year >= 2018) & (stock_df['date'].dt.year <= 2023)]
+        
+        net_worth_history = test_stock(stock_df, initial_investment, num_episodes=1000)
+        plot_net_worth(net_worth_history, stock_df)
 
         metrics = calculate_performance_metrics(net_worth_history, initial_investment)
         display_performance_metrics(metrics)
 
 if __name__ == "__main__":
     main()
+

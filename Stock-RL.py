@@ -10,7 +10,7 @@ from collections import deque
 
 # Define DQN Model
 class DQN(nn.Module):
-    def __init__(self, input_dim, output_dim):  # Fixed __init__ method
+    def __init__(self, input_dim, output_dim):  # Corrected __init__ method
         super(DQN, self).__init__()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
@@ -153,13 +153,13 @@ def plot_net_worth(net_worth, stock_df):
     fig.add_trace(go.Scatter(x=stock_df['date'], y=net_worth_df['value'], mode='lines', name='Portfolio Value', line=dict(color='cyan', width=2)))
     fig.update_layout(title='Change in Portfolio Value Day by Day', xaxis_title='Date', yaxis_title='Value ($)')
     st.plotly_chart(fig, use_container_width=True)
-
+    
     start_price = stock_df['close'].iloc[0]
     end_price = stock_df['close'].iloc[-1]
-
+    
     st.write(f"Start Price: ${start_price:.2f}")
     st.write(f"End Price: ${end_price:.2f}")
-
+    
     st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> Increase in your net worth as a result of a model decision.</p>', unsafe_allow_html=True)
 
 # Function to calculate performance metrics
@@ -169,7 +169,7 @@ def calculate_performance_metrics(net_worth, initial_investment):
     annualized_return = (net_worth[-1] / initial_investment) ** (365 / len(net_worth)) - 1
     daily_returns = np.diff(net_worth) / net_worth[:-1]
     volatility = np.std(daily_returns)
-    sharpe_ratio = annualized_return / volatility if volatility != 0 else 0
+    sharpe_ratio = annualized_return / volatility
 
     return {
         "Total Return": returns,
@@ -182,22 +182,25 @@ def calculate_performance_metrics(net_worth, initial_investment):
 def display_performance_metrics(metrics):
     st.write("### Performance Metrics")
 
-    # Total Return
-    st.write(f"**Total Return:** {metrics['Total Return']:.2f} (This is how much your investment has increased compared to your initial amount.)")
+    # Create a DataFrame for metrics with descriptions
+    metrics_data = {
+        "Metric": ["Total Return", "Annualized Return", "Volatility", "Sharpe Ratio"],
+        "Value": [f"{metrics['Total Return']:.2f}", f"{metrics['Annualized Return']:.2f}", f"{metrics['Volatility']:.2f}", f"{metrics['Sharpe Ratio']:.2f}"],
+        "Description": [
+            "Total percentage gain or loss compared to the initial investment.",
+            "Estimated yearly return assuming consistent gains.",
+            "Indicates how much returns fluctuate over time.",
+            "Measures excess return per unit of risk (volatility)."
+        ]
+    }
     
-    # Annualized Return
-    st.write(f"**Annualized Return:** {metrics['Annualized Return']:.2f} (This represents the yearly return you would achieve if your gains were consistent.)")
-    
-    # Volatility
-    st.write(f"**Volatility:** {metrics['Volatility']:.2f} (This measures how much the returns of your investment fluctuate.)")
-    
-    # Sharpe Ratio
-    st.write(f"**Sharpe Ratio:** {metrics['Sharpe Ratio']:.2f} (This indicates how much excess return you are receiving for the extra volatility you endure.)")
+    metrics_df = pd.DataFrame(metrics_data)
+    st.table(metrics_df)
 
     # Visualization: Bar Chart for Returns
     fig = go.Figure()
-    fig.add_trace(go.Bar(x=list(metrics.keys()), y=[metrics[key] for key in metrics.keys()], name='Performance Metrics'))
-    fig.update_layout(title='Performance Metrics Overview', xaxis_title='Metric', yaxis_title='Value')
+    fig.add_trace(go.Bar(x=metrics_data['Metric'], y=[metrics[key] for key in metrics.keys()], name='Performance Metrics', marker_color='cyan'))
+    fig.update_layout(title='Performance Metrics Overview', xaxis_title='Metric', yaxis_title='Value', template='plotly_white')
     st.plotly_chart(fig)
 
 def main():
@@ -226,36 +229,35 @@ def home_page():
         df = data_prep(data, name)
         final_price = df['close'].iloc[-1]
         initial_price = df['close'].iloc[0]
-        trend = '↑' if final_price > initial_price else '↓'
-        trends.append((name, trend))
-        
-    trend_df = pd.DataFrame(trends, columns=['Company', 'Trend'])
-    st.write(trend_df)
+        trend = "Upward" if final_price > initial_price else "Downward"
+        trends.append({"Company": name, "Trend": trend})
+
+    trend_df = pd.DataFrame(trends)
+    st.write("### Company Trends")
+    st.table(trend_df)
 
 def data_exploration():
-    # This section can include data exploration features
-    st.write("### Data Exploration")
     data = pd.read_csv('all_stocks_5yr.csv')
-    st.write(data.head())  # Display first few rows of the dataset
+    st.write("### Data Overview")
+    st.dataframe(data)
 
 def strategy_simulation():
-    st.write("### Strategy Simulation")
+    data = pd.read_csv('all_stocks_5yr.csv')
+    names = list(data['Name'].unique())
+    selected_company = st.selectbox("Select a company", names)
 
-    # User Inputs
-    selected_stock = st.selectbox("Select Stock", list(data['Name'].unique()))
-    initial_investment = st.number_input("Initial Investment ($)", value=10000)
-    num_episodes = st.number_input("Number of Episodes", value=1000)
+    if selected_company:
+        stocks_test = data_prep(data, selected_company)
+        initial_investment = st.number_input("Initial Investment ($)", min_value=1000, value=10000)
+        num_episodes = st.number_input("Number of Episodes", min_value=1, value=100)
 
-    if st.button("Simulate Trading"):
-        stock_data = data_prep(data, selected_stock)
-        net_worth = test_stock(stock_data, initial_investment, num_episodes)
-        plot_net_worth(net_worth, stock_data)
-        
+        net_worth = test_stock(stocks_test, initial_investment, num_episodes)
+
+        plot_net_worth(net_worth, stocks_test)
+
+        # Calculate performance metrics
         metrics = calculate_performance_metrics(net_worth, initial_investment)
         display_performance_metrics(metrics)
 
 if __name__ == "__main__":
     main()
-
-
-

@@ -10,7 +10,7 @@ from collections import deque
 
 # Define DQN Model
 class DQN(nn.Module):
-    def __init__(self, input_dim, output_dim):  # Fixed __init__ method
+    def __init__(self, input_dim, output_dim):  # Corrected __init__ method
         super(DQN, self).__init__()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
@@ -49,14 +49,14 @@ def data_prep(data, name):
     df.reset_index(drop=True, inplace=True)
     df['5day_MA'] = df['close'].rolling(5).mean()
     df['1day_MA'] = df['close'].rolling(1).mean()
-    df['5day_MA'][:4] = 0
+    df['5day_MA'][:4] = 0  # Set initial MA values to 0
     return df
 
 # Cache the state representation function
 def get_state(data, t):
     long_ma = data['5day_MA'].iloc[t]
     short_ma = data['1day_MA'].iloc[t]
-    cash_in_hand = 1 if t == 0 else 0  # Fixed: Should check for t == 0
+    cash_in_hand = 1 if t == 1 else 0
     return np.array([long_ma, short_ma, cash_in_hand])
 
 # Experience Replay
@@ -97,9 +97,6 @@ def replay():
 
 def update_target_network():
     target_dqn.load_state_dict(dqn.state_dict())
-
-def trade_t(num_of_stocks, port_value, current_price):
-    return 1 if port_value > current_price else 0
 
 def test_stock(stocks_test, initial_investment, num_episodes):
     global epsilon
@@ -199,8 +196,12 @@ def main():
     elif selected_tab == "Strategy Simulation":
         strategy_simulation()
 
+@st.cache_data
+def load_data():
+    return pd.read_csv('all_stocks_5yr.csv')
+
 def home_page():
-    data = pd.read_csv('all_stocks_5yr.csv')
+    data = load_data()
     names = list(data['Name'].unique())
     names.insert(0, "<Select Names>")
     
@@ -218,7 +219,7 @@ def home_page():
     st.write(trends_df)
 
 def data_exploration():
-    data = pd.read_csv('all_stocks_5yr.csv')
+    data = load_data()
     names = list(data['Name'].unique())
     names.insert(0, "<Select Names>")
     
@@ -235,26 +236,22 @@ def show_stock_trend(stock, stock_df):
         st.plotly_chart(fig, use_container_width=True)
 
 def strategy_simulation():
-    data = pd.read_csv('all_stocks_5yr.csv')
-    data['date'] = pd.to_datetime(data['date'])
+    data = load_data()
+    names = list(data['Name'].unique())
+    names.insert(0, "<Select Names>")
+    
+    stock = st.sidebar.selectbox("Choose Company Stocks", names, index=0)
+    invest = st.sidebar.number_input("Enter Investment Funds ($)", min_value=1000, step=1000)
+    if stock != "<Select Names>":
+        stock_df = data_prep(data, stock)
 
-    # No filtering; include all available data
-    stock = st.sidebar.selectbox("Choose Company Stocks", data['Name'].unique())
-    stock_df = data_prep(data, stock)
+        if st.sidebar.button("Calculate", key=2):
+            num_episodes = 10  # Reduce the number of episodes for testing
+            net_worth_history = test_stock(stock_df, invest, num_episodes)
+            plot_net_worth(net_worth_history, stock_df)
 
-    invest = st.sidebar.number_input("Enter Your Investment Amount", min_value=1, value=1000)
-    if st.sidebar.button("Calculate", key=2):
-        num_episodes = 50  # Number of episodes for training
-        net_worth_history = test_stock(stock_df, invest, num_episodes)
-        
-        print("Net Worth History:", net_worth_history)  # Debugging line
-        print("Initial Investment:", invest)  # Debugging line
-        
-        metrics = calculate_performance_metrics(net_worth_history, invest)
-        display_performance_metrics(metrics)
-        plot_net_worth(net_worth_history, stock_df)
+            metrics = calculate_performance_metrics(net_worth_history, invest)
+            display_performance_metrics(metrics)
 
-if __name__ == "__main__":  # Fixed __name__ and __main__ check
+if __name__ == "__main__":
     main()
-
-

@@ -222,19 +222,25 @@ def show_stock_trend(stock, stock_df):
 
 def strategy_simulation():
     data = pd.read_csv('all_stocks_5yr.csv')
-    names = list(data['Name'].unique())
-    names.insert(0, "<Select Names>")
+    data['date'] = pd.to_datetime(data['date'])
+    # Remove the filter to include all available data
+    # data = data[(data['date'].dt.year >= 2013) & (data['date'].dt.year <= 2018)]
     
-    stock_name = st.sidebar.selectbox("Choose Company Stocks", names, index=0)
-    initial_investment = st.sidebar.number_input("Enter Initial Investment ($)", min_value=0, value=1000, step=100)
-    num_episodes = st.sidebar.number_input("Enter Number of Episodes", min_value=1, value=10, step=1)
+    stock = st.sidebar.selectbox("Choose Company Stocks", list(data['Name'].unique()), index=0)
+    
+    if stock:
+        stock_df = data_prep(data, stock)
 
-    if stock_name != "<Select Names>":
-        stock_data = data_prep(data, stock_name)
+        st.sidebar.subheader("Enter Your Available Initial Investment Fund")
+        invest = st.sidebar.slider('Select a range of values', 1000, 1000000)
         
-        if st.sidebar.button("Run Simulation"):
-            net_worth_history = test_stock(stock_data, initial_investment, num_episodes)
-            plot_net_worth(net_worth_history, stock_data)
+        if st.sidebar.button("Calculate", key=2):
+            num_episodes = 50  # Number of episodes for training
+            net_worth_history = test_stock(stock_df, invest, num_episodes)
+            plot_net_worth(net_worth_history, stock_df)
+            metrics = calculate_performance_metrics(net_worth_history, invest)
+            display_performance_metrics(metrics)
+
 
 if __name__ == "__main__":
     main()

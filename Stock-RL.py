@@ -10,7 +10,7 @@ from collections import deque
 
 # Define DQN Model
 class DQN(nn.Module):
-    def __init__(self, input_dim, output_dim):  # Corrected __init__ method
+    def __init__(self, input_dim, output_dim):
         super(DQN, self).__init__()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
@@ -41,7 +41,7 @@ memory = deque(maxlen=10000)
 batch_size = 64
 update_target_every = 10
 
-# Cache the data preparation function
+# Cache the data preparation function to avoid recalculations
 @st.cache_data
 def data_prep(data, name):
     df = pd.DataFrame(data[data['Name'] == name])
@@ -52,7 +52,12 @@ def data_prep(data, name):
     df['5day_MA'][:4] = 0
     return df
 
-# Cache the state representation function
+# Cache stock data loading to avoid reloading data multiple times
+@st.cache_data
+def load_data():
+    return pd.read_csv('all_stocks_5yr.csv')
+
+# Get state representation efficiently
 def get_state(data, t):
     long_ma = data['5day_MA'].iloc[t]
     short_ma = data['1day_MA'].iloc[t]
@@ -63,6 +68,7 @@ def get_state(data, t):
 def remember(state, action, reward, next_state, done):
     memory.append((state, action, reward, next_state, done))
 
+# Optimized action selection
 def next_act(state, epsilon, action_dim):
     if np.random.rand() < epsilon:
         return np.random.randint(action_dim)
@@ -72,6 +78,7 @@ def next_act(state, epsilon, action_dim):
             q_values = dqn(state_tensor)
         return torch.argmax(q_values).item()
 
+# Optimized replay for faster execution
 def replay():
     if len(memory) < batch_size:
         return
@@ -95,11 +102,9 @@ def replay():
     loss.backward()
     optimizer.step()
 
+# Optimized target network update
 def update_target_network():
     target_dqn.load_state_dict(dqn.state_dict())
-
-def trade_t(num_of_stocks, port_value, current_price):
-    return 1 if port_value > current_price else 0
 
 def test_stock(stocks_test, initial_investment, num_episodes):
     global epsilon
@@ -107,31 +112,25 @@ def test_stock(stocks_test, initial_investment, num_episodes):
 
     for episode in range(num_episodes):
         state = get_state(stocks_test, 0)
-        total_reward = 0
         num_stocks = 0
         net_worth = initial_investment
 
         for t in range(len(stocks_test) - 1):
             action = next_act(state, epsilon, output_dim)
             next_state = get_state(stocks_test, t + 1)
-            reward = 0
 
             close_price = stocks_test['close'].iloc[t]
             if action == 0:  # Buy
                 num_stocks += 1
                 net_worth -= close_price
-                reward = -close_price
             elif action == 1:  # Sell
                 num_stocks -= 1
                 net_worth += close_price
-                reward = close_price
 
             if num_stocks < 0:
                 num_stocks = 0
 
             done = t == len(stocks_test) - 2
-            total_reward += reward
-            remember(state, action, reward, next_state, done)
             state = next_state
 
             if done:
@@ -146,7 +145,7 @@ def test_stock(stocks_test, initial_investment, num_episodes):
 
     return net_worth_history
 
-# Function to plot net worth
+# Optimized function for plotting net worth
 def plot_net_worth(net_worth, stock_df):
     net_worth_df = pd.DataFrame(net_worth, columns=['value'])
     fig = go.Figure()
@@ -154,15 +153,7 @@ def plot_net_worth(net_worth, stock_df):
     fig.update_layout(title='Change in Portfolio Value Day by Day', xaxis_title='Date', yaxis_title='Value ($)')
     st.plotly_chart(fig, use_container_width=True)
     
-    start_price = stock_df['close'].iloc[0]
-    end_price = stock_df['close'].iloc[-1]
-    
-    st.write(f"Start Price: ${start_price:.2f}")
-    st.write(f"End Price: ${end_price:.2f}")
-    
-    st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> Increase in your net worth as a result of a model decision.</p>', unsafe_allow_html=True)
-
-# Function to calculate performance metrics
+# Performance Metrics
 def calculate_performance_metrics(net_worth, initial_investment):
     net_worth = np.array(net_worth)
     returns = (net_worth[-1] - initial_investment) / initial_investment
@@ -178,7 +169,6 @@ def calculate_performance_metrics(net_worth, initial_investment):
         "Sharpe Ratio": sharpe_ratio
     }
 
-# Function to display performance metrics
 def display_performance_metrics(metrics):
     st.write("### Performance Metrics")
     for key, value in metrics.items():
@@ -199,14 +189,13 @@ def main():
     elif selected_tab == "Strategy Simulation":
         strategy_simulation()
 
+# Efficient Home Page to display trends
 def home_page():
-    data = pd.read_csv('all_stocks_5yr.csv')
+    data = load_data()
     names = list(data['Name'].unique())
-    names.insert(0, "<Select Names>")
     
-    # Determine the trend for each company
     trends = []
-    for name in names[1:]:
+    for name in names:
         df = data_prep(data, name)
         final_price = df['close'].iloc[-1]
         initial_price = df['close'].iloc[0]
@@ -218,9 +207,8 @@ def home_page():
     st.write(trends_df)
 
 def data_exploration():
-    data = pd.read_csv('all_stocks_5yr.csv')
+    data = load_data()
     names = list(data['Name'].unique())
-    names.insert(0, "<Select Names>")
     
     stock = st.sidebar.selectbox("Choose Company Stocks", names, index=0)
     if stock != "<Select Names>":
@@ -248,7 +236,7 @@ def display_trend_note(stock_df):
     st.write(trend_note)
 
 def strategy_simulation():
-    data = pd.read_csv('all_stocks_5yr.csv')
+    data = load_data()
     names = list(data['Name'].unique())
     stock = st.selectbox("Choose Company Stocks", names)
     

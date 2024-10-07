@@ -173,6 +173,20 @@ def display_performance_metrics(metrics):
     for key, value in metrics.items():
         st.write(f"**{key}:** {value:.2f}")
 
+# Function to get recommendations based on DQN model
+def get_recommendation(stock_df):
+    recommendations = []
+    for t in range(len(stock_df) - 1):
+        state = get_state(stock_df, t)
+        action = next_act(state, epsilon, output_dim)
+        if action == 0:
+            recommendations.append("Buy")
+        elif action == 1:
+            recommendations.append("Sell")
+        else:
+            recommendations.append("Hold")
+    return recommendations
+
 def main():
     st.title("Optimizing Stock Trading Strategy With Reinforcement Learning")
     
@@ -216,20 +230,28 @@ def data_exploration():
         stock_df = data_prep(data, stock)
         show_stock_trend(stock, stock_df)
 
+        if st.sidebar.button("Get Recommendations"):
+            recommendations = get_recommendation(stock_df)
+            recommendation_df = pd.DataFrame(recommendations, columns=["Recommendation"])
+            recommendation_df.index = stock_df['date'][:-1]  # Align with the date
+            st.write("### Trading Recommendations")
+            st.dataframe(recommendation_df)
+
 def show_stock_trend(stock, stock_df):
-    if st.sidebar.button("Show Stock Trend", key=1):
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Stock_Trend', line=dict(color='cyan', width=2)))
-        fig.update_layout(title='Stock Trend of ' + stock, xaxis_title='Date', yaxis_title='Close Price ($)')
-        st.plotly_chart(fig, use_container_width=True)
+    st.write(f"### Price Trend for {stock}")
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Closing Price', line=dict(color='blue', width=2)))
+    fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['5day_MA'], mode='lines', name='5-Day MA', line=dict(color='orange', width=2)))
+    fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['1day_MA'], mode='lines', name='1-Day MA', line=dict(color='green', width=2)))
+    fig.update_layout(title=f'{stock} Price Trend', xaxis_title='Date', yaxis_title='Price ($)')
+    st.plotly_chart(fig, use_container_width=True)
 
 def strategy_simulation():
     data = pd.read_csv('all_stocks_5yr.csv')
-    names = list(data['Name'].unique())
-    names.insert(0, "<Select Names>")
-    
-    stock = st.sidebar.selectbox("Choose Company Stocks", names, index=0)
-    if stock != "<Select Names>":
+    stock_names = list(data['Name'].unique())
+    stock = st.sidebar.selectbox("Choose Company Stocks", stock_names)
+
+    if stock:
         num_episodes = st.sidebar.number_input("Number of Episodes", min_value=1, value=1000)
         initial_investment = st.sidebar.number_input("Initial Investment ($)", min_value=100, value=1000)
 
@@ -243,3 +265,4 @@ def strategy_simulation():
 
 if __name__ == "__main__":
     main()
+

@@ -10,8 +10,8 @@ from collections import deque
 
 # Define DQN Model
 class DQN(nn.Module):
-    def _init(self, input_dim, output_dim):  # Corrected __init_ method
-        super(DQN, self)._init_()
+    def __init__(self, input_dim, output_dim):  # Corrected __init__ method
+        super(DQN, self).__init__()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, output_dim)
@@ -169,7 +169,7 @@ def calculate_performance_metrics(net_worth, initial_investment):
     annualized_return = (net_worth[-1] / initial_investment) ** (365 / len(net_worth)) - 1
     daily_returns = np.diff(net_worth) / net_worth[:-1]
     volatility = np.std(daily_returns)
-    sharpe_ratio = annualized_return / volatility
+    sharpe_ratio = annualized_return / volatility if volatility != 0 else 0
 
     return {
         "Total Return": returns,
@@ -182,7 +182,7 @@ def calculate_performance_metrics(net_worth, initial_investment):
 def display_performance_metrics(metrics):
     st.write("### Performance Metrics")
     for key, value in metrics.items():
-        st.write(f"{key}:** {value:.2f}")
+        st.write(f"{key}: **{value:.2f}**")
 
 def main():
     st.title("Optimizing Stock Trading Strategy With Reinforcement Learning")
@@ -254,5 +254,5 @@ def strategy_simulation():
         display_performance_metrics(metrics)
         plot_net_worth(net_worth_history, stock_df)
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     main()

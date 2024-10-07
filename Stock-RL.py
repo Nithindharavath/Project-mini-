@@ -195,7 +195,7 @@ def company_overview():
 
 # Modify the main function to include the new tab
 def main():
-    st.title("Optimizing Stock Trading Strategy With Reinforcement Learning")
+    st.title("Enhancing Stock Trading Strategy Using Reinforcement Learning")
     
     tabs = ["Home", "Data Exploration", "Strategy Simulation", "Company Overview"]
     selected_tab = st.sidebar.selectbox("Select a tab", tabs)

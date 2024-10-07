@@ -203,7 +203,7 @@ def display_performance_metrics(metrics):
         st.write(f"{key}:** {value:.2f}")
 
 def main():
-    st.title("Optimizing Stock Trading Strategy With Reinforcement Learning")
+    st.title("Enhancing Stock Trading Strategy Using Reinforcement Learning")
     
     tabs = ["Home", "Data Exploration", "Strategy Simulation"]
     selected_tab = st.sidebar.selectbox("Select a tab", tabs)
@@ -248,7 +248,7 @@ def data_exploration():
 def show_stock_trend(stock, stock_df):
     st.write(f"### {stock} Stock Trends")
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Close Price'))
+    fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Close Price', line=dict(color='cyan')))  # Changed line color to cyan
     fig.update_layout(title=f"{stock} Stock Closing Price", xaxis_title="Date", yaxis_title="Price ($)")
     st.plotly_chart(fig, use_container_width=True)
     
@@ -258,6 +258,7 @@ def show_stock_trend(stock, stock_df):
         trend_note = 'Stock has been trending downwards. Caution is advised.'
     
     st.markdown(f"**Trend Note**: {trend_note}")
+
 
 def strategy_simulation():
     data = pd.read_csv('all_stocks_5yr.csv')

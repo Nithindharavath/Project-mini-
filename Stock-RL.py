@@ -148,9 +148,14 @@ def test_stock(stocks_test, initial_investment, num_episodes):
 
 # Function to plot net worth with a dynamic note
 def plot_net_worth(net_worth, stock_df):
+    # Filter stock_df to ensure it's within the correct date range
     net_worth_df = pd.DataFrame(net_worth, columns=['value'])
     
-    # Plot portfolio value over time
+    # Ensure there are enough dates for plotting
+    if len(stock_df) > len(net_worth_df):
+        stock_df = stock_df.iloc[:len(net_worth_df)]  # Align with the length of the net worth history
+
+    # Plot the portfolio value over time
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=stock_df['date'], y=net_worth_df['value'], mode='lines', 
                              name='Portfolio Value', line=dict(color='cyan', width=2)))
@@ -158,7 +163,7 @@ def plot_net_worth(net_worth, stock_df):
                       xaxis_title='Date', yaxis_title='Portfolio Value ($)')
     st.plotly_chart(fig, use_container_width=True)
     
-    # Get start and end net worth from the portfolio history
+    # Display the start and end portfolio values
     start_net_worth = net_worth[0]  # Starting portfolio value
     end_net_worth = net_worth[-1]   # Final portfolio value
     
@@ -172,6 +177,7 @@ def plot_net_worth(net_worth, stock_df):
     else:
         st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> '
                     'Decrease in your net worth as a result of model decisions.</p>', unsafe_allow_html=True)
+
 
 
 # Function to calculate performance metrics
@@ -255,27 +261,30 @@ def show_stock_trend(stock, stock_df):
 
 def strategy_simulation():
     data = pd.read_csv('all_stocks_5yr.csv')
-    names = list(data['Name'].unique())
-    names.insert(0, "<Select Names>")
+    data['date'] = pd.to_datetime(data['date'])  # Ensure 'date' is in datetime format
+
+    # Let the user select the stock and year
+    stock = st.sidebar.selectbox("Choose Company Stocks", data['Name'].unique())
+    selected_year = st.sidebar.selectbox("Select Year", options=list(range(2013, 2019)))  # 2013-2018
+
+    # Prepare the data for the selected stock and year
+    stock_df = data_prep(data, stock)
+    stock_df = stock_df[stock_df['date'].dt.year == selected_year]  # Filter data for the selected year
+
+    invest = st.sidebar.number_input("Enter Your Investment Amount", min_value=1, value=1000)
     
-    stock = st.sidebar.selectbox("Choose Company Stocks", names, index=0)
-    if stock != "<Select Names>":
-        stock_df = data_prep(data, stock)
-
-        st.write(f"## Strategy Simulation for {stock}")
+    if st.sidebar.button("Start Simulation", key=2):
+        num_episodes = 50  # Number of episodes for training
+        net_worth_history = test_stock(stock_df, invest, num_episodes)
         
-        investment = st.number_input("Enter Investment Funds ($)", min_value=500, value=1000)
-        if st.button("Start Simulation"):
-            # Limit data to 2018-2023
-            stock_df = stock_df[(stock_df['date'] >= '2018-01-01') & (stock_df['date'] <= '2023-12-31')]
+        # Display the performance metrics
+        metrics = calculate_performance_metrics(net_worth_history, invest)
+        display_performance_metrics(metrics)
+        
+        # Plot the portfolio value over the selected year
+        plot_net_worth(net_worth_history, stock_df)
 
-            net_worth = test_stock(stock_df, investment, num_episodes=1)
 
-            plot_net_worth(net_worth, stock_df)
-
-            # Calculate and display performance metrics
-            metrics = calculate_performance_metrics(net_worth, investment)
-            display_performance_metrics(metrics)
 
 if __name__ == '__main__':
     main()

@@ -8,7 +8,7 @@ import torch.optim as optim
 import random
 from collections import deque
 
-# Define DQN Model (unchanged)
+# Define DQN Model
 class DQN(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(DQN, self).__init__()
@@ -22,7 +22,7 @@ class DQN(nn.Module):
         x = self.fc3(x)
         return x
 
-# Initialize DQN (unchanged)
+# Initialize DQN
 input_dim = 3  # Number of state features
 output_dim = 3  # Number of actions: Buy, Sell, Hold
 dqn = DQN(input_dim, output_dim)
@@ -31,7 +31,7 @@ target_dqn.load_state_dict(dqn.state_dict())
 optimizer = optim.Adam(dqn.parameters())
 loss_fn = nn.MSELoss()
 
-# Hyperparameters (unchanged)
+# Hyperparameters
 gamma = 0.99
 epsilon_start = 1.0
 epsilon_end = 0.1
@@ -41,7 +41,7 @@ memory = deque(maxlen=10000)
 batch_size = 64
 update_target_every = 10
 
-# Cache the data preparation function (unchanged)
+# Cache the data preparation function
 @st.cache_data
 def data_prep(data, name):
     df = pd.DataFrame(data[data['Name'] == name])
@@ -52,94 +52,142 @@ def data_prep(data, name):
     df['5day_MA'][:4] = 0
     return df
 
-# Add function to prepare data for multiple stocks for comparison
-def data_prep_for_comparison(data, selected_stocks, start_date, end_date):
-    stock_data = {}
-    for stock in selected_stocks:
-        df = pd.DataFrame(data[data['Name'] == stock])
-        df['date'] = pd.to_datetime(df['date'])
-        df = df[(df['date'] >= start_date) & (df['date'] <= end_date)]
-        df['5day_MA'] = df['close'].rolling(5).mean()
-        stock_data[stock] = df.reset_index(drop=True)
-    return stock_data
+# Cache the state representation function
+def get_state(data, t):
+    long_ma = data['5day_MA'].iloc[t]
+    short_ma = data['1day_MA'].iloc[t]
+    cash_in_hand = 1 if t == 1 else 0
+    return np.array([long_ma, short_ma, cash_in_hand])
 
-# Add function to show comparison of stock performance
-def show_comparison(stock_data):
-    fig = go.Figure()
+# Experience Replay
+def remember(state, action, reward, next_state, done):
+    memory.append((state, action, reward, next_state, done))
 
-    # Add stock price trends
-    for stock, df in stock_data.items():
-        fig.add_trace(go.Scatter(x=df['date'], y=df['close'], mode='lines', name=f'{stock} Close Price'))
-    
-    fig.update_layout(title='Stock Price Trends Comparison', xaxis_title='Date', yaxis_title='Price ($)')
-    st.plotly_chart(fig, use_container_width=True)
-
-    # Cumulative returns and volatility comparison
-    display_metrics(stock_data)
-
-# Add function to display metrics like returns, volatility, and moving averages
-def display_metrics(stock_data):
-    st.write("### Key Metrics")
-    
-    metrics = []
-    for stock, df in stock_data.items():
-        initial_price = df['close'].iloc[0]
-        final_price = df['close'].iloc[-1]
-        total_return = (final_price - initial_price) / initial_price
-        daily_returns = df['close'].pct_change().dropna()
-        volatility = daily_returns.std()
-        avg_5day_ma = df['5day_MA'].mean()
-        
-        metrics.append({
-            "Stock": stock,
-            "Initial Price": f"${initial_price:.2f}",
-            "Final Price": f"${final_price:.2f}",
-            "Total Return (%)": f"{total_return * 100:.2f}",
-            "Volatility": f"{volatility:.4f}",
-            "5-day MA": f"${avg_5day_ma:.2f}"
-        })
-
-    metrics_df = pd.DataFrame(metrics)
-    st.write(metrics_df)
-
-# Add function to compare moving averages
-def show_moving_average_comparison(stock_data):
-    fig = go.Figure()
-
-    # Add 5-day moving averages
-    for stock, df in stock_data.items():
-        fig.add_trace(go.Scatter(x=df['date'], y=df['5day_MA'], mode='lines', name=f'{stock} 5-day MA'))
-    
-    fig.update_layout(title='5-Day Moving Averages Comparison', xaxis_title='Date', yaxis_title='Price ($)')
-    st.plotly_chart(fig, use_container_width=True)
-
-# Add the compare stocks function to be included in the sidebar
-def compare_stocks():
-    st.header("Compare Stock Performance")
-    
-    # Load dataset
-    data = pd.read_csv('all_stocks_5yr.csv')
-    
-    # List of stock names
-    stock_names = list(data['Name'].unique())
-    
-    # User input for stocks and timeframe
-    selected_stocks = st.multiselect("Choose Stocks to Compare", stock_names)
-    start_date = st.date_input("Start Date", value=pd.to_datetime('2013-01-01'))
-    end_date = st.date_input("End Date", value=pd.to_datetime('2018-01-01'))
-    
-    if len(selected_stocks) >= 2:
-        stock_data = data_prep_for_comparison(data, selected_stocks, start_date, end_date)
-        show_comparison(stock_data)
-        show_moving_average_comparison(stock_data)
+def next_act(state, epsilon, action_dim):
+    if np.random.rand() < epsilon:
+        return np.random.randint(action_dim)
     else:
-        st.write("Please select at least two stocks to compare.")
+        state_tensor = torch.tensor(state, dtype=torch.float).unsqueeze(0)
+        with torch.no_grad():
+            q_values = dqn(state_tensor)
+        return torch.argmax(q_values).item()
 
-# Define the main function
+def replay():
+    if len(memory) < batch_size:
+        return
+    
+    batch = random.sample(memory, batch_size)
+    states, actions, rewards, next_states, dones = zip(*batch)
+
+    states = torch.tensor(states, dtype=torch.float)
+    actions = torch.tensor(actions, dtype=torch.long)
+    rewards = torch.tensor(rewards, dtype=torch.float)
+    next_states = torch.tensor(next_states, dtype=torch.float)
+    dones = torch.tensor(dones, dtype=torch.float)
+
+    q_values = dqn(states).gather(1, actions.unsqueeze(1)).squeeze(1)
+    next_q_values = target_dqn(next_states).max(1)[0]
+    target_q_values = rewards + gamma * next_q_values * (1 - dones)
+
+    loss = loss_fn(q_values, target_q_values)
+
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+
+def update_target_network():
+    target_dqn.load_state_dict(dqn.state_dict())
+
+def trade_t(num_of_stocks, port_value, current_price):
+    return 1 if port_value > current_price else 0
+
+def test_stock(stocks_test, initial_investment, num_episodes):
+    global epsilon
+    net_worth_history = [initial_investment]
+
+    for episode in range(num_episodes):
+        state = get_state(stocks_test, 0)
+        total_reward = 0
+        num_stocks = 0
+        net_worth = initial_investment
+
+        for t in range(len(stocks_test) - 1):
+            action = next_act(state, epsilon, output_dim)
+            next_state = get_state(stocks_test, t + 1)
+            reward = 0
+
+            close_price = stocks_test['close'].iloc[t]
+            if action == 0:  # Buy
+                num_stocks += 1
+                net_worth -= close_price
+                reward = -close_price
+            elif action == 1:  # Sell
+                num_stocks -= 1
+                net_worth += close_price
+                reward = close_price
+
+            if num_stocks < 0:
+                num_stocks = 0
+
+            done = t == len(stocks_test) - 2
+            total_reward += reward
+            remember(state, action, reward, next_state, done)
+            state = next_state
+
+            if done:
+                break
+
+        epsilon = max(epsilon_end, epsilon_decay * epsilon)
+        replay()
+        if episode % update_target_every == 0:
+            update_target_network()
+
+        net_worth_history.append(net_worth)
+
+    return net_worth_history
+
+# Function to plot net worth
+def plot_net_worth(net_worth, stock_df):
+    net_worth_df = pd.DataFrame(net_worth, columns=['value'])
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=stock_df['date'], y=net_worth_df['value'], mode='lines', name='Portfolio Value', line=dict(color='cyan', width=2)))
+    fig.update_layout(title='Change in Portfolio Value Day by Day', xaxis_title='Date', yaxis_title='Value ($)')
+    st.plotly_chart(fig, use_container_width=True)
+    
+    start_price = stock_df['close'].iloc[0]
+    end_price = stock_df['close'].iloc[-1]
+    
+    st.write(f"*Start Price:* ${start_price:.2f}")
+    st.write(f"*End Price:* ${end_price:.2f}")
+    
+    st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> Increase in your net worth as a result of a model decision.</p>', unsafe_allow_html=True)
+
+# Function to calculate performance metrics
+def calculate_performance_metrics(net_worth, initial_investment):
+    net_worth = np.array(net_worth)
+    returns = (net_worth[-1] - initial_investment) / initial_investment
+    annualized_return = (net_worth[-1] / initial_investment) ** (365 / len(net_worth)) - 1
+    daily_returns = np.diff(net_worth) / net_worth[:-1]
+    volatility = np.std(daily_returns)
+    sharpe_ratio = annualized_return / volatility
+
+    return {
+        "Total Return": returns,
+        "Annualized Return": annualized_return,
+        "Volatility": volatility,
+        "Sharpe Ratio": sharpe_ratio
+    }
+
+# Function to display performance metrics
+def display_performance_metrics(metrics):
+    st.write("### Performance Metrics")
+    for key, value in metrics.items():
+        st.write(f"{key}:** {value:.2f}")
+
 def main():
     st.title("Optimizing Stock Trading Strategy With Reinforcement Learning")
     
-    tabs = ["Home", "Data Exploration", "Strategy Simulation", "Compare Stock Performance"]
+    tabs = ["Home", "Data Exploration", "Strategy Simulation"]
     selected_tab = st.sidebar.selectbox("Select a tab", tabs)
 
     if selected_tab == "Home":
@@ -150,11 +198,71 @@ def main():
     
     elif selected_tab == "Strategy Simulation":
         strategy_simulation()
+
+def home_page():
+    data = pd.read_csv('all_stocks_5yr.csv')
+    names = list(data['Name'].unique())
+    names.insert(0, "<Select Names>")
     
-    elif selected_tab == "Compare Stock Performance":
-        compare_stocks()
+    # Determine the trend for each company
+    trends = []
+    for name in names[1:]:
+        df = data_prep(data, name)
+        final_price = df['close'].iloc[-1]
+        initial_price = df['close'].iloc[0]
+        trend = "Upward" if final_price > initial_price else "Downward"
+        trends.append({"Company": name, "Trend": trend})
 
-# Other functions remain the same as your original code for home page, strategy simulation, etc.
+    trends_df = pd.DataFrame(trends)
+    st.write("### Company Trends")
+    st.write(trends_df)
 
-if __name__ == '__main__':
+def data_exploration():
+    data = pd.read_csv('all_stocks_5yr.csv')
+    names = list(data['Name'].unique())
+    names.insert(0, "<Select Names>")
+    
+    stock = st.sidebar.selectbox("Choose Company Stocks", names, index=0)
+    if stock != "<Select Names>":
+        stock_df = data_prep(data, stock)
+        show_stock_trend(stock, stock_df)
+
+def show_stock_trend(stock, stock_df):
+    if st.sidebar.button("Show Stock Trend", key=1):
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Stock_Trend', line=dict(color='cyan', width=2)))
+        fig.update_layout(title='Stock Trend of ' + stock, xaxis_title='Date', yaxis_title='Price ($)')
+        st.plotly_chart(fig, use_container_width=True)
+        
+        trend_note = ''
+        if stock_df['close'].iloc[-1] > stock_df['close'].iloc[0]:
+            trend_note = f"The stock of {stock} has shown an upward trend."
+        else:
+            trend_note = f"The stock of {stock} has shown a downward trend."
+        
+        st.markdown(f"<p style='font-family:Play; color:Cyan; font-size: 16px;'>{trend_note}</p>", unsafe_allow_html=True)
+
+def strategy_simulation():
+    data = pd.read_csv('all_stocks_5yr.csv')
+    names = list(data['Name'].unique())
+    names.insert(0, "<Select Names>")
+    
+    stock_name = st.sidebar.selectbox("Choose Company Stocks", names, index=0)
+    initial_investment = st.sidebar.number_input("Enter Initial Investment ($)", min_value=0, value=1000, step=100)
+    num_episodes = st.sidebar.number_input("Enter Number of Episodes", min_value=1, value=10, step=1)
+
+    if stock_name != "<Select Names>":
+        stock_data = data_prep(data, stock_name)
+        
+        if st.sidebar.button("Run Simulation"):
+            net_worth_history = test_stock(stock_data, initial_investment, num_episodes)
+            plot_net_worth(net_worth_history, stock_data)
+
+            # Performance metrics calculation
+            metrics = calculate_performance_metrics(net_worth_history, initial_investment)
+            st.write("### Performance Metrics")
+            for key, value in metrics.items():
+                st.write(f"{key}:** {value:.2f}")
+
+if __name__ == "__main__":
     main()

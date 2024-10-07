@@ -164,10 +164,12 @@ def plot_net_worth(net_worth, stock_df):
     st.write(f"Start Price: ${start_price:.2f}")
     st.write(f"End Price: ${end_price:.2f}")
     
+    # Check net worth change and display appropriate note
     if end_net_worth > start_net_worth:
         st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> Increase in your net worth as a result of model decisions.</p>', unsafe_allow_html=True)
     else:
         st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> Decrease in your net worth as a result of model decisions.</p>', unsafe_allow_html=True)
+
 
 # Function to calculate performance metrics
 def calculate_performance_metrics(net_worth, initial_investment):

@@ -10,7 +10,7 @@ from collections import deque
 
 # Define DQN Model
 class DQN(nn.Module):
-    def __init__(self, input_dim, output_dim):  # Corrected __init__ method
+    def __init__(self, input_dim, output_dim):
         super(DQN, self).__init__()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
@@ -56,7 +56,7 @@ def data_prep(data, name):
 def get_state(data, t):
     long_ma = data['5day_MA'].iloc[t]
     short_ma = data['1day_MA'].iloc[t]
-    cash_in_hand = 1 if t == 1 else 0
+    cash_in_hand = 1 if t == 1 else 0  # Cash in hand if not the first trade
     return np.array([long_ma, short_ma, cash_in_hand])
 
 # Experience Replay
@@ -97,9 +97,6 @@ def replay():
 
 def update_target_network():
     target_dqn.load_state_dict(dqn.state_dict())
-
-def trade_t(num_of_stocks, port_value, current_price):
-    return 1 if port_value > current_price else 0
 
 def test_stock(stocks_test, initial_investment, num_episodes):
     global epsilon
@@ -153,14 +150,6 @@ def plot_net_worth(net_worth, stock_df):
     fig.add_trace(go.Scatter(x=stock_df['date'], y=net_worth_df['value'], mode='lines', name='Portfolio Value', line=dict(color='cyan', width=2)))
     fig.update_layout(title='Change in Portfolio Value Day by Day', xaxis_title='Date', yaxis_title='Value ($)')
     st.plotly_chart(fig, use_container_width=True)
-    
-    start_price = stock_df['close'].iloc[0]
-    end_price = stock_df['close'].iloc[-1]
-    
-    st.write(f"Start Price: ${start_price:.2f}")
-    st.write(f"End Price: ${end_price:.2f}")
-    
-    st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> Increase in your net worth as a result of a model decision.</p>', unsafe_allow_html=True)
 
 # Function to calculate performance metrics
 def calculate_performance_metrics(net_worth, initial_investment):
@@ -254,4 +243,3 @@ def strategy_simulation():
 
 if __name__ == "__main__":
     main()
-

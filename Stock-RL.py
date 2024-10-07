@@ -162,28 +162,6 @@ def plot_net_worth(net_worth, stock_df):
     
     st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> Increase in your net worth as a result of a model decision.</p>', unsafe_allow_html=True)
 
-# Function to calculate performance metrics
-def calculate_performance_metrics(net_worth, initial_investment):
-    net_worth = np.array(net_worth)
-    returns = (net_worth[-1] - initial_investment) / initial_investment
-    annualized_return = (net_worth[-1] / initial_investment) ** (365 / len(net_worth)) - 1
-    daily_returns = np.diff(net_worth) / net_worth[:-1]
-    volatility = np.std(daily_returns)
-    sharpe_ratio = annualized_return / volatility
-
-    return {
-        "Total Return": returns,
-        "Annualized Return": annualized_return,
-        "Volatility": volatility,
-        "Sharpe Ratio": sharpe_ratio
-    }
-
-# Function to display performance metrics
-def display_performance_metrics(metrics):
-    st.write("### Performance Metrics")
-    for key, value in metrics.items():
-        st.write(f"{key}:** {value:.2f}")
-
 def main():
     st.title("Optimizing Stock Trading Strategy With Reinforcement Learning")
     
@@ -258,11 +236,6 @@ def strategy_simulation():
             net_worth_history = test_stock(stock_data, initial_investment, num_episodes)
             plot_net_worth(net_worth_history, stock_data)
 
-            # Performance metrics calculation
-            metrics = calculate_performance_metrics(net_worth_history, initial_investment)
-            st.write("### Performance Metrics")
-            for key, value in metrics.items():
-                st.write(f"{key}:** {value:.2f}")
-
 if __name__ == "__main__":
     main()
+

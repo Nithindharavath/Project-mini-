@@ -49,7 +49,7 @@ def data_prep(data, name):
     df.reset_index(drop=True, inplace=True)
     df['5day_MA'] = df['close'].rolling(5).mean()
     df['1day_MA'] = df['close'].rolling(1).mean()
-    df['5day_MA'][:4] = 0  # Set initial MA values to 0
+    df['5day_MA'][:4] = 0
     return df
 
 # Cache the state representation function
@@ -97,6 +97,9 @@ def replay():
 
 def update_target_network():
     target_dqn.load_state_dict(dqn.state_dict())
+
+def trade_t(num_of_stocks, port_value, current_price):
+    return 1 if port_value > current_price else 0
 
 def test_stock(stocks_test, initial_investment, num_episodes):
     global epsilon
@@ -179,7 +182,7 @@ def calculate_performance_metrics(net_worth, initial_investment):
 def display_performance_metrics(metrics):
     st.write("### Performance Metrics")
     for key, value in metrics.items():
-        st.write(f"{key}: **{value:.2f}")
+        st.write(f"{key}: **{value:.2f}**")
 
 def main():
     st.title("Optimizing Stock Trading Strategy With Reinforcement Learning")
@@ -196,12 +199,8 @@ def main():
     elif selected_tab == "Strategy Simulation":
         strategy_simulation()
 
-@st.cache_data
-def load_data():
-    return pd.read_csv('all_stocks_5yr.csv')
-
 def home_page():
-    data = load_data()
+    data = pd.read_csv('all_stocks_5yr.csv')
     names = list(data['Name'].unique())
     names.insert(0, "<Select Names>")
     
@@ -219,7 +218,7 @@ def home_page():
     st.write(trends_df)
 
 def data_exploration():
-    data = load_data()
+    data = pd.read_csv('all_stocks_5yr.csv')
     names = list(data['Name'].unique())
     names.insert(0, "<Select Names>")
     
@@ -227,31 +226,44 @@ def data_exploration():
     if stock != "<Select Names>":
         stock_df = data_prep(data, stock)
         show_stock_trend(stock, stock_df)
+        show_trend_note(stock_df)
 
 def show_stock_trend(stock, stock_df):
     if st.sidebar.button("Show Stock Trend", key=1):
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Stock_Trend', line=dict(color='cyan', width=2)))
+        fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Stock Trend', line=dict(color='cyan', width=2)))
         fig.update_layout(title='Stock Trend of ' + stock, xaxis_title='Date', yaxis_title='Stock Price ($)')
         st.plotly_chart(fig, use_container_width=True)
 
+def show_trend_note(stock_df):
+    final_price = stock_df['close'].iloc[-1]
+    initial_price = stock_df['close'].iloc[0]
+
+    if final_price > initial_price:
+        trend_note = 'Stock is on a solid upward trend. Investing here might be profitable.'
+        st.markdown(f"<p style='color: green; font-size: 16px;'>{trend_note}</p>", unsafe_allow_html=True)
+    elif final_price < initial_price:
+        trend_note = 'Stock is on a downward trend. Proceed with caution before investing.'
+        st.markdown(f"<p style='color: red; font-size: 16px;'>{trend_note}</p>", unsafe_allow_html=True)
+    else:
+        trend_note = 'Stock prices are stable. Consider other factors before investing.'
+        st.markdown(f"<p style='color: orange; font-size: 16px;'>{trend_note}</p>", unsafe_allow_html=True)
+
 def strategy_simulation():
-    data = load_data()
-    names = list(data['Name'].unique())
-    names.insert(0, "<Select Names>")
-    
-    stock = st.sidebar.selectbox("Choose Company Stocks", names, index=0)
-    invest = st.sidebar.number_input("Enter Investment Funds ($)", min_value=1000, step=1000)
-    if stock != "<Select Names>":
-        stock_df = data_prep(data, stock)
+    st.subheader("Simulating Strategy")
+    initial_investment = st.number_input("Initial Investment ($)", value=10000)
+    num_episodes = st.number_input("Number of Episodes", value=10)
 
-        if st.sidebar.button("Calculate", key=2):
-            num_episodes = 10  # Reduce the number of episodes for testing
-            net_worth_history = test_stock(stock_df, invest, num_episodes)
-            plot_net_worth(net_worth_history, stock_df)
+    if st.button("Start Simulation"):
+        data = pd.read_csv('all_stocks_5yr.csv')
+        stock_name = st.selectbox("Select Stock for Simulation", data['Name'].unique())
 
-            metrics = calculate_performance_metrics(net_worth_history, invest)
-            display_performance_metrics(metrics)
+        stocks_test = data_prep(data, stock_name)
+        net_worth_history = test_stock(stocks_test, initial_investment, num_episodes)
+        plot_net_worth(net_worth_history, stocks_test)
+
+        metrics = calculate_performance_metrics(net_worth_history, initial_investment)
+        display_performance_metrics(metrics)
 
 if __name__ == "__main__":
     main()

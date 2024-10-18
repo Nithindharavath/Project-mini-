@@ -10,7 +10,7 @@ from collections import deque
 
 # Define DQN Model
 class DQN(nn.Module):
-    def __init__(self, input_dim, output_dim):
+    def __init__(self, input_dim, output_dim):  # Corrected __init__ method
         super(DQN, self).__init__()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
@@ -224,33 +224,40 @@ def home_page():
     trends = []
     for name in names[1:]:
         df = data_prep(data, name)
-        if df['close'].iloc[-1] > df['close'].iloc[0]:
-            trends.append(f"The trend for {name} is UP.")
+        final_price = df['close'].iloc[-1]
+        initial_price = df['close'].iloc[0]
+        if final_price > initial_price:
+            trends.append(f"{name}: Positive Trend")
         else:
-            trends.append(f"The trend for {name} is DOWN.")
+            trends.append(f"{name}: Negative Trend")
     
+    st.write("### Company Trends")
     for trend in trends:
         st.write(trend)
 
 def data_exploration():
     data = pd.read_csv('all_stocks_5yr.csv')
-    st.write(data)
+    st.write("### Data Overview")
+    st.write(data.head())
 
 def strategy_simulation():
     data = pd.read_csv('all_stocks_5yr.csv')
-    names = list(data['Name'].unique())
-    selected_stock = st.selectbox("Select a stock to trade:", names)
-    initial_investment = st.number_input("Initial Investment ($)", value=10000)
-    num_episodes = st.number_input("Number of Episodes", value=10)
-
-    if st.button("Start Simulation"):
-        stock_data = data_prep(data, selected_stock)
-        net_worth_history = test_stock(stock_data, initial_investment, num_episodes)
-        plot_net_worth(net_worth_history, stock_data)
+    st.sidebar.header("Simulation Parameters")
+    
+    stock_name = st.sidebar.selectbox("Select a Stock", data['Name'].unique())
+    initial_investment = st.sidebar.number_input("Initial Investment ($)", value=10000, min_value=1)
+    num_episodes = st.sidebar.number_input("Number of Episodes", value=100, min_value=1)
+    
+    if st.sidebar.button("Start Simulation"):
+        stocks_test = data_prep(data, stock_name)
+        net_worth = test_stock(stocks_test, initial_investment, num_episodes)
+        
+        # Plot net worth
+        plot_net_worth(net_worth, stocks_test)
         
         # Calculate and display performance metrics
-        metrics = calculate_performance_metrics(net_worth_history, initial_investment)
+        metrics = calculate_performance_metrics(net_worth, initial_investment)
         display_performance_metrics(metrics)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

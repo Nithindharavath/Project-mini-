@@ -10,7 +10,7 @@ from collections import deque
 
 # Define DQN Model
 class DQN(nn.Module):
-    def _init_(self, input_dim, output_dim):  # Corrected __init_ method
+    def _init(self, input_dim, output_dim):  # Corrected __init_ method
         super(DQN, self)._init_()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
@@ -23,7 +23,7 @@ class DQN(nn.Module):
         return x
 
 # Initialize DQN
-input_dim = 5  # Number of state features
+input_dim = 3  # Number of state features
 output_dim = 3  # Number of actions: Buy, Sell, Hold
 dqn = DQN(input_dim, output_dim)
 target_dqn = DQN(input_dim, output_dim)
@@ -154,21 +154,21 @@ def plot_net_worth(net_worth, stock_df):
     # Ensure there are enough dates for plotting
     if len(stock_df) > len(net_worth_df):
         stock_df = stock_df.iloc[:len(net_worth_df)]  # Align with the length of the net worth history
-    net_worth_in_k = net_worth_df['value'] / 1000
+
     # Plot the portfolio value over time
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=stock_df['date'], y=net_worth_df['value'], mode='lines', 
                              name='Portfolio Value', line=dict(color='cyan', width=2)))
     fig.update_layout(title='Change in Portfolio Value Day by Day', 
-                      xaxis_title='Date', yaxis_title='Portfolio Value (K,$)')
+                      xaxis_title='Date', yaxis_title='Portfolio Value ($)')
     st.plotly_chart(fig, use_container_width=True)
     
     # Display the start and end portfolio values
     start_net_worth = net_worth[0]  # Starting portfolio value
     end_net_worth = net_worth[-1]   # Final portfolio value
     
-    st.write(f"Start Portfolio Value: {start_net_worth:.2f}K")
-    st.write(f"End Portfolio Value: {end_net_worth:.2f}K")
+    st.write(f"Start Portfolio Value: ${start_net_worth:.2f}")
+    st.write(f"End Portfolio Value: ${end_net_worth:.2f}")
     
     # Display a note based on net worth increase or decrease
     if end_net_worth > start_net_worth:

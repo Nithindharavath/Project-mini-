@@ -288,4 +288,4 @@ def strategy_simulation():
 
 
 if _name_ == '_main_':
-    main()
+    main()

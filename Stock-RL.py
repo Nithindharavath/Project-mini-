@@ -23,8 +23,8 @@ class DQN(nn.Module):
         return x
 
 # Initialize DQN
-input_dim = 3  # Number of state features
-output_dim = 3  # Number of actions: Buy, Sell, Hold
+input_dim = stock_df.shape[1]  # Number of features in your dataset (or observation space size)
+output_dim = 3
 dqn = DQN(input_dim, output_dim)
 target_dqn = DQN(input_dim, output_dim)
 target_dqn.load_state_dict(dqn.state_dict())

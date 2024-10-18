@@ -23,7 +23,7 @@ class DQN(nn.Module):
         return x
 
 # Initialize DQN
-input_dim = 3  # Number of state features
+input_dim = 5  # Number of state features
 output_dim = 3  # Number of actions: Buy, Sell, Hold
 dqn = DQN(input_dim, output_dim)
 target_dqn = DQN(input_dim, output_dim)

@@ -167,8 +167,8 @@ def plot_net_worth(net_worth, stock_df):
     start_net_worth = net_worth[0]  # Starting portfolio value
     end_net_worth = net_worth[-1]   # Final portfolio value
     
-    st.write(f"Start Portfolio Value: ${start_net_worth:.2f}")
-    st.write(f"End Portfolio Value: ${end_net_worth:.2f}")
+    st.write(f"Start Portfolio Value: {start_net_worth:.2f}")
+    st.write(f"End Portfolio Value: {end_net_worth:.2f}")
     
     # Display a note based on net worth increase or decrease
     if end_net_worth > start_net_worth:

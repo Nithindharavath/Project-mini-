@@ -10,8 +10,8 @@ from collections import deque
 
 # Define DQN Model
 class DQN(nn.Module):
-    def _init(self, input_dim, output_dim):  # Corrected __init_ method
-        super(DQN, self)._init_()
+    def __init__(self, input_dim, output_dim):  # Corrected __init__ method
+        super(DQN, self).__init__()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, output_dim)
@@ -257,7 +257,7 @@ def show_stock_trend(stock, stock_df):
     else:
         trend_note = 'Stock has been trending downwards. Caution is advised.'
     
-    st.markdown(f"*Trend Note*: {trend_note}")
+    st.markdown(f"**Trend Note**: {trend_note}")
 
 
 def strategy_simulation():
@@ -287,5 +287,5 @@ def strategy_simulation():
 
 
 
-if _name_ == '_main_':
+if __name__ == '__main__':
     main()

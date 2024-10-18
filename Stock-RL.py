@@ -10,8 +10,8 @@ from collections import deque
 
 # Define DQN Model
 class DQN(nn.Module):
-    def __init__(self, input_dim, output_dim):
-        super(DQN, self).__init__()
+    def _init(self, input_dim, output_dim):  # Corrected __init_ method
+        super(DQN, self)._init_()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, output_dim)
@@ -148,31 +148,33 @@ def test_stock(stocks_test, initial_investment, num_episodes):
 
 # Function to plot net worth with a dynamic note
 def plot_net_worth(net_worth, stock_df):
-    # Convert portfolio values to thousands for consistency
-    net_worth_k = [value / 1000 for value in net_worth]  # Convert to 'K' (thousands)
-    net_worth_df = pd.DataFrame(net_worth_k, columns=['value'])
-    
     # Filter stock_df to ensure it's within the correct date range
+    net_worth_df = pd.DataFrame(net_worth, columns=['value'])
+    
+    # Ensure there are enough dates for plotting
     if len(stock_df) > len(net_worth_df):
         stock_df = stock_df.iloc[:len(net_worth_df)]  # Align with the length of the net worth history
 
+    # Convert portfolio values to K (thousands) for plotting
+    net_worth_df['value'] = net_worth_df['value'] / 1000
+    
     # Plot the portfolio value over time
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=stock_df['date'], y=net_worth_df['value'], mode='lines', 
-                             name='Portfolio Value (K)', line=dict(color='cyan', width=2)))
-    fig.update_layout(title='Change in Portfolio Value Day by Day (in K)', 
-                      xaxis_title='Date', yaxis_title='Portfolio Value (K$)')
+                             name='Portfolio Value', line=dict(color='cyan', width=2)))
+    fig.update_layout(title='Change in Portfolio Value Day by Day', 
+                      xaxis_title='Date', yaxis_title='Portfolio Value (K $)')
     st.plotly_chart(fig, use_container_width=True)
-
-    # Display the start and end portfolio values in 'K'
-    start_net_worth_k = net_worth[0] / 1000  # Starting portfolio value in thousands
-    end_net_worth_k = net_worth[-1] / 1000   # Final portfolio value in thousands
     
-    st.write(f"Start Portfolio Value: ${start_net_worth_k:.2f}K")
-    st.write(f"End Portfolio Value: ${end_net_worth_k:.2f}K")
-
+    # Display the start and end portfolio values in K
+    start_net_worth = net_worth[0] / 1000  # Starting portfolio value in K
+    end_net_worth = net_worth[-1] / 1000   # Final portfolio value in K
+    
+    st.write(f"Start Portfolio Value: **{start_net_worth:.2f}K**")
+    st.write(f"End Portfolio Value: **{end_net_worth:.2f}K**")
+    
     # Display a note based on net worth increase or decrease
-    if end_net_worth_k > start_net_worth_k:
+    if end_net_worth > start_net_worth:
         st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> '
                     'Increase in your net worth as a result of model decisions.</p>', unsafe_allow_html=True)
     else:
@@ -199,7 +201,7 @@ def calculate_performance_metrics(net_worth, initial_investment):
 def display_performance_metrics(metrics):
     st.write("### Performance Metrics")
     for key, value in metrics.items():
-        st.write(f"{key}:** {value:.2f}")
+        st.write(f"{key}: **{value:.2f}**")
 
 def main():
     st.title("Enhancing Stock Trading Strategy Using Reinforcement Learning")
@@ -219,12 +221,4 @@ def main():
 def home_page():
     data = pd.read_csv('all_stocks_5yr.csv')
     names = list(data['Name'].unique())
-    names.insert(0, "<Select Names>")
-    
-    # Determine the trend for each company
-    trends = []
-    for name in names[1:]:
-        df = data_prep(data, name)
-        final_price = df['close'].iloc[-1]
-        initial_price = df['close'].iloc[0]
-        trend = "Upward"
+    names.insert(0

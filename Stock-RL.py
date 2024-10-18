@@ -10,8 +10,8 @@ from collections import deque
 
 # Define DQN Model
 class DQN(nn.Module):
-    def __init__(self, input_dim, output_dim):  # Corrected __init__ method
-        super(DQN, self).__init__()  # Corrected __init__ call
+    def __init__(self, input_dim, output_dim):
+        super(DQN, self).__init__()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, output_dim)
@@ -252,5 +252,5 @@ def strategy_simulation():
         metrics = calculate_performance_metrics(net_worth_history, initial_investment)
         display_performance_metrics(metrics)
 
-if __name__ == '__main__':  # Corrected this line
+if __name__ == '__main__':
     main()

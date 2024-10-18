@@ -10,7 +10,7 @@ from collections import deque
 
 # Define DQN Model
 class DQN(nn.Module):
-    def _init_(self, input_dim, output_dim):
+    def _init(self, input_dim, output_dim):  # Corrected __init_ method
         super(DQN, self)._init_()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)

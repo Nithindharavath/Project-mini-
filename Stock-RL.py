@@ -235,26 +235,25 @@ def home_page():
             "Average Closing Price": avg_closing_price,
         })
 
-    # Create a DataFrame and filter for upward trends
+    # Create a DataFrame and sort it with upward companies first
     insights_df = pd.DataFrame(insights)
-    upward_companies = insights_df[insights_df['Performance Trend'] == "Upward"]
-    top_upward_companies = upward_companies.sort_values(by="Average Closing Price", ascending=False).head(5)
+    insights_df['Upward Indicator'] = insights_df['Performance Trend'].apply(lambda x: 1 if x == "Upward" else 0)
+    insights_df = insights_df.sort_values(by=['Upward Indicator', 'Average Closing Price'], ascending=[False, False]).drop(columns=['Upward Indicator'])
+
+    # Create a bar graph for the top 5 upward companies
+    top_upward_companies = insights_df[insights_df['Performance Trend'] == "Upward"].head(5)
 
     # Create two columns for layout
     col1, col2 = st.columns([2, 1])  # Adjust column widths as needed
 
-    # Column 1: Display the original insights table
+    # Column 1: Display the insights table
     with col1:
         st.write("### Company Trends")
         st.write(insights_df)
 
-    # Column 2: Display the top 5 upward companies in a separate table
+    # Column 2: Display the bar graph for the top 5 upward companies
     with col2:
         if not top_upward_companies.empty:
-            st.write("### Top 5 Upward Companies")
-            st.write(top_upward_companies)
-
-            # Create a bar graph for the top 5 upward companies
             fig = go.Figure()
             fig.add_trace(go.Bar(
                 x=top_upward_companies['Company'],
@@ -284,6 +283,7 @@ def home_page():
 
     # Optional: Style for headings
     st.markdown("<style>h1 {color: darkslategray;} h2 {color: darkslategray;}</style>", unsafe_allow_html=True)
+
 
 
 def data_exploration():

@@ -247,7 +247,7 @@ def home_page():
     # Create two columns for layout
     col1, col2 = st.columns([2, 1])  # Adjust column widths as needed
 
-    # Column 1: Table
+    # Column 1: Display the original table
     with col1:
         st.write(insights_df)
 

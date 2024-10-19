@@ -10,8 +10,8 @@ from collections import deque
 
 # Define DQN Model
 class DQN(nn.Module):
-    def __init__(self, input_dim, output_dim):  # Corrected __init__ method
-        super(DQN, self).__init__()
+    def _init(self, input_dim, output_dim):  # Corrected __init_ method
+        super(DQN, self)._init_()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, output_dim)
@@ -178,6 +178,8 @@ def plot_net_worth(net_worth, stock_df):
         st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> '
                     'Decrease in your net worth as a result of model decisions.</p>', unsafe_allow_html=True)
 
+
+
 # Function to calculate performance metrics
 def calculate_performance_metrics(net_worth, initial_investment):
     net_worth = np.array(net_worth)
@@ -198,7 +200,7 @@ def calculate_performance_metrics(net_worth, initial_investment):
 def display_performance_metrics(metrics):
     st.write("### Performance Metrics")
     for key, value in metrics.items():
-        st.write(f"{key}: {value:.2f}")
+        st.write(f"{key}:{value:.2f}")
 
 def main():
     st.title("Enhancing Stock Trading Strategy Using Reinforcement Learning")
@@ -216,12 +218,47 @@ def main():
         strategy_simulation()
 
 def home_page():
-    data = pd.read_csv('all_stocks_5yr.csv')  # Load your dataset
-    st.write(data.head())  # Display the first few rows of the dataset
+    data = pd.read_csv('all_stocks_5yr.csv')
+    names = list(data['Name'].unique())
+    names.insert(0, "<Select Names>")
+    
+    # Determine the trend for each company
+    trends = []
+    for name in names[1:]:
+        df = data_prep(data, name)
+        final_price = df['close'].iloc[-1]
+        initial_price = df['close'].iloc[0]
+        trend = "Upward" if final_price > initial_price else "Downward"
+        trends.append({"Company": name, "Trend": trend})
+
+    trends_df = pd.DataFrame(trends)
+    st.write("### Company Trends")
+    st.write(trends_df)
 
 def data_exploration():
-    data = pd.read_csv('all_stocks_5yr.csv')  # Load your dataset
-    st.write(data.describe())  # Display statistical information about the dataset
+    data = pd.read_csv('all_stocks_5yr.csv')
+    names = list(data['Name'].unique())
+    names.insert(0, "<Select Names>")
+    
+    stock = st.sidebar.selectbox("Choose Company Stocks", names, index=0)
+    if stock != "<Select Names>":
+        stock_df = data_prep(data, stock)
+        show_stock_trend(stock, stock_df)
+
+def show_stock_trend(stock, stock_df):
+    st.write(f"### {stock} Stock Trends")
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Close Price', line=dict(color='cyan')))  # Changed line color to cyan
+    fig.update_layout(title=f"{stock} Stock Closing Price", xaxis_title="Date", yaxis_title="Price ($)")
+    st.plotly_chart(fig, use_container_width=True)
+    
+    if stock_df['close'].iloc[-1] > stock_df['close'].iloc[0]:
+        trend_note = 'Stock is on a solid upward trend. Investing here might be profitable.'
+    else:
+        trend_note = 'Stock has been trending downwards. Caution is advised.'
+    
+    st.markdown(f"*Trend Note*: {trend_note}")
+
 
 def strategy_simulation():
     data = pd.read_csv('all_stocks_5yr.csv')  # Load your dataset
@@ -237,6 +274,6 @@ def strategy_simulation():
         metrics = calculate_performance_metrics(net_worth, initial_investment)
         display_performance_metrics(metrics)
 
-if __name__ == "__main__":  # Corrected entry point
-    main()
 
+if _name_ == '_main_':
+    main()

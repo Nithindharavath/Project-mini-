@@ -240,15 +240,12 @@ def home_page():
     upward_companies = insights_df[insights_df['Performance Trend'] == "Upward"]
     top_upward_companies = upward_companies.sort_values(by="Average Closing Price", ascending=False).head(5)
 
-    # Display the company trends in a table format
-    st.write("### Company Trends")
-    st.write(insights_df)
-
     # Create two columns for layout
     col1, col2 = st.columns([2, 1])  # Adjust column widths as needed
 
     # Column 1: Display the original table
     with col1:
+        st.write("### Company Trends")
         st.write(insights_df)
 
     # Column 2: Graph for the top 5 upward companies
@@ -258,7 +255,7 @@ def home_page():
             fig.add_trace(go.Bar(
                 x=top_upward_companies['Company'],
                 y=top_upward_companies['Average Closing Price'],
-                marker_color='cyan'
+                marker_color='royalblue'  # Professional color
             ))
 
             fig.update_layout(
@@ -266,7 +263,7 @@ def home_page():
                 xaxis_title="Company",
                 yaxis_title="Average Closing Price ($)",
                 plot_bgcolor='rgba(0, 0, 0, 0)',
-                title_font=dict(size=16, color='cyan'),
+                title_font=dict(size=16, color='darkslategray'),  # Professional color for title
                 xaxis=dict(tickangle=-45, title_font=dict(size=14), tickfont=dict(size=12)),
                 yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
                 margin=dict(l=20, r=20, t=40, b=40)
@@ -275,13 +272,14 @@ def home_page():
             st.plotly_chart(fig, use_container_width=True)
 
     # Summary of potential profit for the top upward companies
-    st.markdown("<h3 style='text-align: center;'>Performance Insights</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center; color: darkslategray;'>Performance Insights</h3>", unsafe_allow_html=True)
     for index, row in top_upward_companies.iterrows():
         st.write(f"**{row['Company']}**: Good potential for profit.")
         st.write(f"- **Average Closing Price**: ${row['Average Closing Price']:.2f}")
         st.write("----")  # Add a separator between companies
 
-    st.markdown("<style>h1 {color: cyan;} h2 {color: white;} h3 {color: white;}</style>", unsafe_allow_html=True)
+    # Optional: Style for headings
+    st.markdown("<style>h1 {color: darkslategray;} h2 {color: darkslategray;}</style>", unsafe_allow_html=True)
 
 
 def data_exploration():

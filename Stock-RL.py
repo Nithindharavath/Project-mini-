@@ -337,5 +337,5 @@ def strategy_simulation():
             metrics = calculate_performance_metrics(net_worth_history, initial_investment)
             display_performance_metrics(metrics)
 
-if _name_ == "_main_":
+if __name__ == "__main__":  # Change _name_ and _main_ to __name__ and __main__
     main()

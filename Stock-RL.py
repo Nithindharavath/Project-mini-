@@ -9,17 +9,11 @@ import random
 from collections import deque
 
 class DQN(nn.Module):
-    def _init_(self, input_dim, output_dim):
-        super(DQN, self)._init_()
+    def __init__(self, input_dim, output_dim):  # Change _init_ to __init__
+        super(DQN, self).__init__()  # Change _init_ to __init__()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, output_dim)
-
-    def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
 
 
 # Initialize DQN

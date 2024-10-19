@@ -9,10 +9,9 @@ import random
 from collections import deque
 
 # Define DQN Model
-# Define DQN Model
 class DQN(nn.Module):
-    def __init__(self, input_dim, output_dim):  # Corrected __init__ method
-        super(DQN, self).__init__()  # Corrected the superclass call
+    def _init(self, input_dim, output_dim):  # Corrected __init_ method
+        super(DQN, self)._init_()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, output_dim)
@@ -22,11 +21,6 @@ class DQN(nn.Module):
         x = torch.relu(self.fc2(x))
         x = self.fc3(x)
         return x
-
-# Main execution
-if __name__ == "__main__":  # Corrected the if statement
-    main()
-
 
 # Initialize DQN
 input_dim = 3  # Number of state features
@@ -123,19 +117,14 @@ def test_stock(stocks_test, initial_investment, num_episodes):
             reward = 0
 
             close_price = stocks_test['close'].iloc[t]
-            next_close_price = stocks_test['close'].iloc[t + 1]
-
             if action == 0:  # Buy
                 num_stocks += 1
                 net_worth -= close_price
-                reward = -close_price  # Penalty for buying
+                reward = -close_price
             elif action == 1:  # Sell
-                if num_stocks > 0:
-                    num_stocks -= 1
-                    net_worth += close_price
-                    reward = close_price - next_close_price  # Reward based on selling price vs next price
-                else:
-                    reward = 0  # No stocks to sell, no reward
+                num_stocks -= 1
+                net_worth += close_price
+                reward = close_price
 
             if num_stocks < 0:
                 num_stocks = 0
@@ -156,6 +145,7 @@ def test_stock(stocks_test, initial_investment, num_episodes):
         net_worth_history.append(net_worth)
 
     return net_worth_history
+
 # Function to plot net worth with a dynamic note
 def plot_net_worth(net_worth, stock_df):
     # Filter stock_df to ensure it's within the correct date range
@@ -214,17 +204,18 @@ def display_performance_metrics(metrics):
 
 def main():
     st.title("Enhancing Stock Trading Strategy Using Reinforcement Learning")
-
+    
     tabs = ["Home", "Data Exploration", "Strategy Simulation"]
     selected_tab = st.sidebar.selectbox("Select a tab", tabs)
 
-    # Comment out the tab selection to isolate the error
-    # if selected_tab == "Home":
-    #     home_page()
-    # elif selected_tab == "Data Exploration":
-    #     data_exploration()
-    # elif selected_tab == "Strategy Simulation":
-    #     strategy_simulation()
+    if selected_tab == "Home":
+        home_page()
+    
+    elif selected_tab == "Data Exploration":
+        data_exploration()
+    
+    elif selected_tab == "Strategy Simulation":
+        strategy_simulation()
 
 def home_page():
     data = pd.read_csv('all_stocks_5yr.csv')
@@ -287,12 +278,14 @@ def strategy_simulation():
         num_episodes = 50  # Number of episodes for training
         net_worth_history = test_stock(stock_df, invest, num_episodes)
         
-        # Calculate the performance metrics with the adjusted rewards
+        # Display the performance metrics
         metrics = calculate_performance_metrics(net_worth_history, invest)
         display_performance_metrics(metrics)
         
         # Plot the portfolio value over the selected year
         plot_net_worth(net_worth_history, stock_df)
+
+
 
 if _name_ == '_main_':
     main()

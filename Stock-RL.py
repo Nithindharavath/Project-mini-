@@ -227,14 +227,27 @@ def home_page():
         final_price = df['close'].mean()  # Average closing price
         initial_price = df['close'].iloc[0]
         trend = "Upward" if final_price > initial_price else "Downward"
-        
-        # Determine profit potential
-        if trend == "Upward":
+
+        # Calculate moving average over the last 30 days for recent trend indication
+        df['30day_MA'] = df['close'].rolling(window=30).mean()
+        recent_trend = "Positive" if df['30day_MA'].iloc[-1] > df['30day_MA'].iloc[-2] else "Negative"
+
+        # Determine profit potential based on historical average and recent trend
+        if trend == "Upward" and recent_trend == "Positive":
             profit_potential = "High"
         else:
             profit_potential = "Low"
         
-        trends.append({"Company": name, "Trend": trend, "Average Price": final_price, "Profit Potential": profit_potential})
+        # Include volatility as standard deviation of closing prices
+        volatility = df['close'].std()
+
+        trends.append({
+            "Company": name,
+            "Trend": trend,
+            "Average Price": final_price,
+            "Profit Potential": profit_potential,
+            "Volatility": volatility
+        })
 
     # Create a DataFrame and sort by Average Price
     trends_df = pd.DataFrame(trends)
@@ -246,7 +259,12 @@ def home_page():
     # Provide a note about profit potential
     st.write("### Profit Potential Overview")
     for index, row in trends_df.iterrows():
-        st.write(f"{row['Company']}: {row['Profit Potential']} profit potential based on current trend.")
+        st.write(f"**{row['Company']}**: {row['Profit Potential']} profit potential based on historical trend and recent performance.")
+        st.write(f"- **Trend**: {row['Trend']}")
+        st.write(f"- **Average Price**: ${row['Average Price']:.2f}")
+        st.write(f"- **Volatility (Std. Dev.)**: ${row['Volatility']:.2f}")
+        st.write("----")  # Add a separator between companies
+
 
 def data_exploration():
     data = pd.read_csv('all_stocks_5yr.csv')

@@ -274,13 +274,6 @@ def home_page():
 
             st.plotly_chart(fig, use_container_width=True)
 
-    # Summary of potential profit for the top upward companies
-    st.markdown("<h3 style='text-align: center; color: darkslategray;'>Performance Insights</h3>", unsafe_allow_html=True)
-    for index, row in top_upward_companies.iterrows():
-        st.write(f"**{row['Company']}**: Good potential for profit.")
-        st.write(f"- **Average Closing Price**: ${row['Average Closing Price']:.2f}")
-        st.write("----")  # Add a separator between companies
-
     # Optional: Style for headings
     st.markdown("<style>h1 {color: darkslategray;} h2 {color: darkslategray;}</style>", unsafe_allow_html=True)
 

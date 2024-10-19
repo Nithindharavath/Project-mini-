@@ -111,6 +111,7 @@ def test_stock(stocks_test, initial_investment, num_episodes):
         total_reward = 0
         num_stocks = 0
         net_worth = initial_investment
+        total_invested = 0  # Track the total investment for average price calculation
 
         for t in range(len(stocks_test) - 1):
             action = next_act(state, epsilon, output_dim)
@@ -121,18 +122,21 @@ def test_stock(stocks_test, initial_investment, num_episodes):
             if action == 0:  # Buy
                 num_stocks += 1
                 net_worth -= close_price
+                total_invested += close_price  # Update the total invested amount
                 reward = -close_price  # Penalize for buying
             elif action == 1:  # Sell
                 if num_stocks > 0:  # Only sell if we own stocks
                     num_stocks -= 1
                     net_worth += close_price
-                    # Reward is calculated based on the profit/loss
-                    # The profit is the difference between selling price and the price when last bought
-                    if t > 0:  # Ensure there's a previous price to compare against
-                        previous_price = stocks_test['close'].iloc[t-1]  # Price at which the stock was last bought
-                        reward = close_price - previous_price  # Calculate profit/loss
+                    
+                    # Calculate the average cost price
+                    if num_stocks > 0:
+                        avg_buy_price = total_invested / (num_stocks + 1)
                     else:
-                        reward = close_price  # If this is the first sale, just return the selling price
+                        avg_buy_price = close_price  # If no stocks left, use current price
+                    
+                    reward = close_price - avg_buy_price  # Profit or loss based on average cost
+                    total_invested -= avg_buy_price  # Reduce the total investment
 
             if num_stocks < 0:
                 num_stocks = 0
@@ -153,7 +157,6 @@ def test_stock(stocks_test, initial_investment, num_episodes):
         net_worth_history.append(net_worth)
 
     return net_worth_history
-
 
 
 # Function to plot net worth with a dynamic note

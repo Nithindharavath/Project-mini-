@@ -224,18 +224,29 @@ def home_page():
     trends = []
     for name in names[1:]:
         df = data_prep(data, name)
-        final_price = df['close'].iloc[-1]
+        final_price = df['close'].mean()  # Average closing price
         initial_price = df['close'].iloc[0]
         trend = "Upward" if final_price > initial_price else "Downward"
-        trends.append({"Company": name, "Trend": trend, "Ending Price": final_price})
+        
+        # Determine profit potential
+        if trend == "Upward":
+            profit_potential = "High"
+        else:
+            profit_potential = "Low"
+        
+        trends.append({"Company": name, "Trend": trend, "Average Price": final_price, "Profit Potential": profit_potential})
 
-    # Create a DataFrame and sort by Ending Price
+    # Create a DataFrame and sort by Average Price
     trends_df = pd.DataFrame(trends)
-    trends_df = trends_df.sort_values(by="Ending Price", ascending=False)
+    trends_df = trends_df.sort_values(by="Average Price", ascending=False)
 
     st.write("### Top Trading Companies")
     st.write(trends_df)
 
+    # Provide a note about profit potential
+    st.write("### Profit Potential Overview")
+    for index, row in trends_df.iterrows():
+        st.write(f"{row['Company']}: {row['Profit Potential']} profit potential based on current trend.")
 
 def data_exploration():
     data = pd.read_csv('all_stocks_5yr.csv')

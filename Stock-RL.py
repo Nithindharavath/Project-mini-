@@ -9,8 +9,8 @@ import random
 from collections import deque
 
 class DQN(nn.Module):
-    def _init_(self, input_dim, output_dim):  # Original method name
-        super(DQN, self).__init__()  # Original method name
+    def _init_(self, input_dim, output_dim):
+        super(DQN, self)._init_()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, output_dim)
@@ -20,6 +20,7 @@ class DQN(nn.Module):
         x = torch.relu(self.fc2(x))
         x = self.fc3(x)
         return x
+
 
 # Initialize DQN
 input_dim = 3  # Number of state features
@@ -225,39 +226,76 @@ def home_page():
         df = data_prep(data, name)
         final_price = df['close'].iloc[-1]
         initial_price = df['close'].iloc[0]
-        trend = "Bullish" if final_price > initial_price else "Bearish"
-        trends.append(f"{name}: {trend}")
-    
-    st.write("## Company Trends")
-    for trend in trends:
-        st.write(trend)
+        trend = "Upward" if final_price > initial_price else "Downward"
+        trends.append({"Company": name, "Trend": trend})
+
+    trends_df = pd.DataFrame(trends)
+    st.write("### Company Trends")
+    st.write(trends_df)
 
 def data_exploration():
     data = pd.read_csv('all_stocks_5yr.csv')
-    st.write("## Data Overview")
-    st.dataframe(data.head())
-
-    stock_name = st.selectbox("Select a stock", list(data['Name'].unique()))
+    names = list(data['Name'].unique())
+    names.insert(0, "<Select Names>")
     
-    if stock_name:
-        stock_data = data_prep(data, stock_name)
-        st.write(f"### Stock Data for {stock_name}")
-        st.dataframe(stock_data)
+    stock = st.sidebar.selectbox("Choose Company Stocks", names, index=0)
+    if stock != "<Select Names>":
+        stock_df = data_prep(data, stock)
+        
+        # Check if stock_df is not empty
+        if stock_df.empty:
+            st.warning(f"No data available for {stock}. Please select a different stock.")
+            return
+        
+        show_stock_trend(stock, stock_df)
+
+def show_stock_trend(stock, stock_df):
+    st.write(f"### {stock} Stock Trends")
+    
+    # Check if 'date' and 'close' columns exist
+    if 'date' in stock_df.columns and 'close' in stock_df.columns:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Close Price', line=dict(color='cyan')))
+        fig.update_layout(title=f"{stock} Stock Closing Price", xaxis_title="Date", yaxis_title="Price ($)")
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Trend note logic
+        if stock_df['close'].iloc[-1] > stock_df['close'].iloc[0]:
+            trend_note = 'Stock is on a solid upward trend. Investing here might be profitable.'
+        else:
+            trend_note = 'Stock has been trending downwards. Caution is advised.'
+        
+        st.markdown(f"Trend Note: {trend_note}")
+    else:
+        st.error(f"Data for {stock} is missing required columns.")
+
+        
 
 def strategy_simulation():
     data = pd.read_csv('all_stocks_5yr.csv')
-    stock_name = st.selectbox("Select a stock", list(data['Name'].unique()))
-    
-    if stock_name:
-        stock_data = data_prep(data, stock_name)
-        initial_investment = st.number_input("Enter your initial investment:", value=1000, min_value=100)
-        num_episodes = st.number_input("Enter number of episodes:", value=100, min_value=10)
+    names = list(data['Name'].unique())
+    selected_name = st.selectbox("Select Company Name", names)
 
-        net_worth = test_stock(stock_data, initial_investment, num_episodes)
-        plot_net_worth(net_worth, stock_data)
+    if selected_name:
+        df = data_prep(data, selected_name)
+        
+        # Get unique years from the dataset for dynamic selection
+        df['date'] = pd.to_datetime(df['date'])
+        years = df['date'].dt.year.unique().tolist()
+        years.sort()
 
-        metrics = calculate_performance_metrics(net_worth, initial_investment)
-        display_performance_metrics(metrics)
+        # Year selection based on dataset
+        selected_year = st.selectbox("Select Year", years)
 
-if __name__ == "__main__":
-    main()
+        # Filter data based on selected year
+        df_selected_year = df[df['date'].dt.year == selected_year]
+
+        initial_investment = st.number_input("Enter your initial investment ($)", value=1000, step=100)
+        if st.button("Start Simulation"):
+            net_worth_history = test_stock(df_selected_year, initial_investment, num_episodes=100)
+            plot_net_worth(net_worth_history, df_selected_year)
+            metrics = calculate_performance_metrics(net_worth_history, initial_investment)
+            display_performance_metrics(metrics)
+
+if _name_ == "_main_":
+    main()

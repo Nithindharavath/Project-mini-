@@ -229,38 +229,52 @@ def home_page():
         initial_closing_price = df['close'].iloc[0]
         performance_trend = "Upward" if avg_closing_price > initial_closing_price else "Downward"
 
-        # Calculate 30-day moving average for recent performance assessment
-        df['30day_MA'] = df['close'].rolling(window=30).mean()
-        recent_movement = "Positive" if df['30day_MA'].iloc[-1] > df['30day_MA'].iloc[-2] else "Negative"
-
-        # Determine potential for profit based on trends and recent performance
-        if performance_trend == "Upward" and recent_movement == "Positive":
-            potential_profit = "High Probability of Profit"
-        elif performance_trend == "Downward" and recent_movement == "Negative":
-            potential_profit = "Low Probability of Profit"
-        else:
-            potential_profit = "Monitor Closely"
-
+        # Store insights
         insights.append({
             "Company": name,
             "Performance Trend": performance_trend,
             "Average Closing Price": avg_closing_price,
-            "Potential Profit": potential_profit,
         })
 
-    # Create a DataFrame and sort by Average Closing Price
+    # Create a DataFrame and filter for upward trends
     insights_df = pd.DataFrame(insights)
-    insights_df = insights_df.sort_values(by="Average Closing Price", ascending=False)
+    upward_companies = insights_df[insights_df['Performance Trend'] == "Upward"]
+    top_upward_companies = upward_companies.sort_values(by="Average Closing Price", ascending=False).head(5)
 
-    st.write("### Top Trading Companies")
-    st.write(insights_df)
+    # Display the top upward companies
+    st.markdown("<h2 style='text-align: center;'>Top 5 Upward Trading Companies</h2>", unsafe_allow_html=True)
+    
+    # Bar chart for the top 5 upward companies
+    if not top_upward_companies.empty:
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            x=top_upward_companies['Company'],
+            y=top_upward_companies['Average Closing Price'],
+            marker_color='cyan'
+        ))
 
-    st.write("### Summary of Potential Profit")
-    for index, row in insights_df.iterrows():
-        st.write(f"**{row['Company']}**: {row['Potential Profit']}.")
-        st.write(f"- **Performance Trend**: {row['Performance Trend']}")
+        fig.update_layout(
+            title="Average Closing Prices of Top 5 Upward Companies",
+            xaxis_title="Company",
+            yaxis_title="Average Closing Price ($)",
+            plot_bgcolor='rgba(0, 0, 0, 0)',
+            title_font=dict(size=24, color='cyan'),
+            xaxis=dict(tickangle=-45, title_font=dict(size=16), tickfont=dict(size=14)),
+            yaxis=dict(title_font=dict(size=16), tickfont=dict(size=14)),
+            margin=dict(l=40, r=40, t=40, b=40)
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+    # Summary of potential profit
+    st.markdown("<h3 style='text-align: center;'>Performance Insights</h3>", unsafe_allow_html=True)
+    for index, row in top_upward_companies.iterrows():
+        st.write(f"**{row['Company']}**: Good potential for profit.")
         st.write(f"- **Average Closing Price**: ${row['Average Closing Price']:.2f}")
         st.write("----")  # Add a separator between companies
+
+    st.markdown("<style>h1 {color: cyan;} h2 {color: white;} h3 {color: white;}</style>", unsafe_allow_html=True)
+
 
 def data_exploration():
     data = pd.read_csv('all_stocks_5yr.csv')

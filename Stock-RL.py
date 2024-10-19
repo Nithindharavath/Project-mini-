@@ -257,21 +257,34 @@ def strategy_simulation():
 
     name = st.selectbox("Select Company", list(data['Name'].unique()))
     
-    # Get the unique years from the dataset
-    data['year'] = pd.to_datetime(data['date']).dt.year
+    # Convert date to datetime and extract the year
+    data['date'] = pd.to_datetime(data['date'])
+    data['year'] = data['date'].dt.year
     unique_years = sorted(data['year'].unique())
     
     # Select year instead of episodes
     year = st.selectbox("Select Year", unique_years)
     
-    # Filter data for the selected year
-    df_year = data[data['year'] == year]
+    # Filter data for the selected year and company
+    df_year = data[(data['year'] == year) & (data['Name'] == name)]
+    
+    # Check for required columns
+    required_columns = ['5day_MA', 'date']  # Add any other required columns
+    if not all(col in df_year.columns for col in required_columns):
+        st.error("The required columns are not present in the selected year data.")
+        return  # Exit the function if required columns are missing
+
     initial_investment = st.number_input("Initial Investment", min_value=1, value=10000)
 
     if st.button("Run Simulation"):
         # Simulate with data for the selected year
         net_worth_history = test_stock(df_year, initial_investment, num_episodes=1)  # Set num_episodes to 1 for the specific year
+        
+        # Plot the net worth history
+        st.write("### Net Worth Over Time")
         plot_net_worth(net_worth_history, df_year)
+        
+        # Display performance metrics
         metrics = calculate_performance_metrics(net_worth_history, initial_investment)
         display_performance_metrics(metrics)
 

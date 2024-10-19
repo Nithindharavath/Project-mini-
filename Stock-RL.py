@@ -9,8 +9,8 @@ import random
 from collections import deque
 
 class DQN(nn.Module):
-    def __init__(self, input_dim, output_dim):  # Corrected method name
-        super(DQN, self).__init__()  # Corrected method name
+    def _init_(self, input_dim, output_dim):  # Original method name
+        super(DQN, self).__init__()  # Original method name
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, output_dim)

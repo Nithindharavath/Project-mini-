@@ -111,7 +111,6 @@ def test_stock(stocks_test, initial_investment, num_episodes):
         total_reward = 0
         num_stocks = 0
         net_worth = initial_investment
-        total_invested = 0  # Track the total investment for average price calculation
 
         for t in range(len(stocks_test) - 1):
             action = next_act(state, epsilon, output_dim)
@@ -122,21 +121,15 @@ def test_stock(stocks_test, initial_investment, num_episodes):
             if action == 0:  # Buy
                 num_stocks += 1
                 net_worth -= close_price
-                total_invested += close_price  # Update the total invested amount
                 reward = -close_price  # Penalize for buying
             elif action == 1:  # Sell
                 if num_stocks > 0:  # Only sell if we own stocks
                     num_stocks -= 1
                     net_worth += close_price
-                    
-                    # Calculate the average cost price
-                    if num_stocks > 0:
-                        avg_buy_price = total_invested / (num_stocks + 1)
-                    else:
-                        avg_buy_price = close_price  # If no stocks left, use current price
-                    
-                    reward = close_price - avg_buy_price  # Profit or loss based on average cost
-                    total_invested -= avg_buy_price  # Reduce the total investment
+                    # Calculate profit/loss
+                    reward = close_price - stocks_test['close'].iloc[t-1] if t > 0 else 0
+                    if reward < 0:  # If selling at a loss
+                        reward = reward  # Keep the loss
 
             if num_stocks < 0:
                 num_stocks = 0
@@ -157,6 +150,36 @@ def test_stock(stocks_test, initial_investment, num_episodes):
         net_worth_history.append(net_worth)
 
     return net_worth_history
+
+def plot_net_worth(net_worth, stock_df):
+    net_worth_df = pd.DataFrame(net_worth, columns=['value'])
+    
+    # Ensure there are enough dates for plotting
+    if len(stock_df) > len(net_worth_df):
+        stock_df = stock_df.iloc[:len(net_worth_df)]  # Align with the length of the net worth history
+
+    # Plot the portfolio value over time
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=stock_df['date'], y=net_worth_df['value'], mode='lines', 
+                             name='Portfolio Value', line=dict(color='cyan', width=2)))
+    fig.update_layout(title='Change in Portfolio Value Day by Day', 
+                      xaxis_title='Date', yaxis_title='Portfolio Value ($)')
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Display the start and end portfolio values
+    start_net_worth = net_worth[0]  # Starting portfolio value
+    end_net_worth = net_worth[-1]   # Final portfolio value
+    
+    st.write(f"Start Portfolio Value: {start_net_worth:.2f}")
+    st.write(f"End Portfolio Value: {end_net_worth:.2f}")
+    
+    # Display a note based on net worth increase or decrease
+    if end_net_worth > start_net_worth:
+        st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> '
+                    'Increase in your net worth as a result of model decisions.</p>', unsafe_allow_html=True)
+    else:
+        st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> '
+                    'Decrease in your net worth as a result of model decisions.</p>', unsafe_allow_html=True)
 
 
 # Function to plot net worth with a dynamic note

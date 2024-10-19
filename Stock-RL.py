@@ -8,6 +8,27 @@ import torch.optim as optim
 import random
 from collections import deque
 
+# HTML and CSS for styling
+st.markdown("""
+    <style>
+        body {
+            background-image: url('https://www.google.com/url?sa=i&url=https%3A%2F%2Fpikbest.com%2Ftemplates%2Fpngtree-design-of-landing-page-of-stock-market-trading-platform_5496715.html&psig=AOvVaw0T_7qkt8HRSxmuIufXcYVj&ust=1729449647356000&source=images&cd=vfe&opi=89978449');
+            background-size: cover;
+        }
+        h1 {
+            color: white;
+        }
+        h2 {
+            color: white;
+        }
+        .note {
+            font-family: Play;
+            color: Cyan;
+            font-size: 20px;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 class DQN(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(DQN, self).__init__()
@@ -172,10 +193,10 @@ def plot_net_worth(net_worth, stock_df):
     
     # Display a note based on net worth increase or decrease
     if end_net_worth > start_net_worth:
-        st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> '
+        st.markdown('<b><p class="note">NOTE:<br> '
                     'Increase in your net worth as a result of model decisions.</p>', unsafe_allow_html=True)
     else:
-        st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> '
+        st.markdown('<b><p class="note">NOTE:<br> '
                     'Decrease in your net worth as a result of model decisions.</p>', unsafe_allow_html=True)
 
 # Function to calculate performance metrics
@@ -200,86 +221,44 @@ def display_performance_metrics(metrics):
     for key, value in metrics.items():
         st.write(f"{key}: {value:.2f}")
 
-# Function to add custom HTML and CSS for background and styling
-def add_custom_css():
-    custom_css = """
-    <style>
-    body {
-        background-image: url('https://www.pikbest.com/templates/pngtree-design-of-landing-page-of-stock-market-trading-platform_5496715.html'); /* Replace with your image URL */
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
-        color: white;
-        font-family: Arial, sans-serif;
-        margin: 0;
-        padding: 0;
-        height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        position: relative;
-    }
-
-    .overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        z-index: 1;
-    }
-
-    .content {
-        position: relative;
-        z-index: 2;
-        text-align: center;
-    }
-
-    h1 {
-        font-size: 3em;
-        margin-bottom: 20px;
-    }
-
-    p {
-        font-size: 1.5em;
-        margin-bottom: 30px;
-    }
-
-    .btn {
-        background-color: cyan;
-        color: black;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 5px;
-        text-decoration: none;
-        font-size: 1.2em;
-    }
-
-    .btn:hover {
-        background-color: darkcyan;
-    }
-    </style>
-    """
-    st.markdown(custom_css, unsafe_allow_html=True)
-
-# Main function to call the components
 def main():
-    add_custom_css()  # Call the custom CSS function
     st.title("Enhancing Stock Trading Strategy Using Reinforcement Learning")
     
-    # Example input
-    stock_data = pd.read_csv('your_stock_data.csv')  # Replace with your CSV file path
-    selected_stock = st.selectbox("Select a stock:", stock_data['Name'].unique())
-    stocks_test = data_prep(stock_data, selected_stock)
+    tabs = ["Home", "Data Exploration", "Strategy Simulation"]
+    selected_tab = st.sidebar.selectbox("Select a tab", tabs)
 
-    if st.button("Run Simulation"):
-        initial_investment = 10000
-        net_worth_history = test_stock(stocks_test, initial_investment, num_episodes=100)
-        plot_net_worth(net_worth_history, stocks_test)
+    if selected_tab == "Home":
+        st.subheader("Welcome to the Stock Trading Strategy App")
+        st.write("This app simulates stock trading strategies using reinforcement learning.")
+    
+    elif selected_tab == "Data Exploration":
+        st.subheader("Stock Data")
+        stock_data = pd.read_csv('your_stock_data.csv')  # Replace with your CSV file path
+        st.write(stock_data)
 
-        metrics = calculate_performance_metrics(net_worth_history, initial_investment)
-        display_performance_metrics(metrics)
+        selected_stock = st.selectbox("Select a stock", stock_data['Name'].unique())
+        df_selected_year = data_prep(stock_data, selected_stock)
+        st.write(df_selected_year)
+
+        # Visualization of stock prices
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=df_selected_year['date'], y=df_selected_year['close'], 
+                                 mode='lines', name='Close Price'))
+        fig.update_layout(title=f"{selected_stock} Stock Prices", xaxis_title='Date', yaxis_title='Price ($)')
+        st.plotly_chart(fig, use_container_width=True)
+
+    elif selected_tab == "Strategy Simulation":
+        st.subheader("Simulating Strategy")
+        initial_investment = st.number_input("Initial Investment ($)", min_value=1000, value=10000)
+        if st.button("Run Simulation"):
+            stock_data = pd.read_csv('your_stock_data.csv')  # Replace with your CSV file path
+            df_selected_year = data_prep(stock_data, selected_stock)
+            net_worth_history = test_stock(df_selected_year, initial_investment, num_episodes=100)
+            plot_net_worth(net_worth_history, df_selected_year)
+
+            # Calculate and display performance metrics
+            metrics = calculate_performance_metrics(net_worth_history, initial_investment)
+            display_performance_metrics(metrics)
 
 if __name__ == "__main__":
     main()

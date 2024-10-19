@@ -206,16 +206,17 @@ def plot_net_worth(net_worth, stock_df):
     start_net_worth = net_worth[0]  # Starting portfolio value
     end_net_worth = net_worth[-1]   # Final portfolio value
     
-    st.write(f"Start Portfolio Value: {start_net_worth:.2f}")
-    st.write(f"End Portfolio Value: {end_net_worth:.2f}")
+    st.write(f"<span style='color:gray;'>Start Portfolio Value: {start_net_worth:.2f}</span>", unsafe_allow_html=True)
+    st.write(f"<span style='color:gray;'>End Portfolio Value: {end_net_worth:.2f}</span>", unsafe_allow_html=True)
     
     # Display a note based on net worth increase or decrease
     if end_net_worth > start_net_worth:
-        st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> '
-                    'Increase in your net worth as a result of model decisions.</p>', unsafe_allow_html=True)
+        st.markdown("<span style='color:green; font-size: 20px;'>NOTE:<br> "
+                    "Increase in your net worth as a result of model decisions.</span>", unsafe_allow_html=True)
     else:
-        st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> '
-                    'Decrease in your net worth as a result of model decisions.</p>', unsafe_allow_html=True)
+        st.markdown("<span style='color:red; font-size: 20px;'>NOTE:<br> "
+                    "Decrease in your net worth as a result of model decisions.</span>", unsafe_allow_html=True)
+
 
 # Function to calculate performance metrics
 def calculate_performance_metrics(net_worth, initial_investment):

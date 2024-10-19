@@ -9,8 +9,8 @@ import random
 from collections import deque
 
 class DQN(nn.Module):
-    def __init__(self, input_dim, output_dim):  # Change _init to __init__
-        super(DQN, self).__init__()  # Change _init to __init__()
+    def __init__(self, input_dim, output_dim):  # Corrected __init__ method
+        super(DQN, self).__init__()  # Corrected __init__ method
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, output_dim)
@@ -20,6 +20,7 @@ class DQN(nn.Module):
         x = torch.relu(self.fc2(x))
         x = self.fc3(x)
         return x
+
 
 # Initialize DQN
 input_dim = 3  # Number of state features
@@ -219,44 +220,33 @@ def home_page():
     names = list(data['Name'].unique())
     names.insert(0, "<Select Names>")
     
-    # Company Selection
-    selected_name = st.selectbox("Select a Company", names)
+    # Prepare to gather insights
+    insights = []
+    
+    for name in names[1:]:
+        df = data_prep(data, name)
+        avg_closing_price = df['close'].mean()  # Average closing price
+        initial_closing_price = df['close'].iloc[0]
+        performance_trend = "Upward" if avg_closing_price > initial_closing_price else "Downward"
 
-    if selected_name != "<Select Names>":
-        df = data_prep(data, selected_name)
-        st.write(df)
-
+        insights.append({
+            "Company": name,
+            "Performance Trend": performance_trend,
+            "Average Closing Price": avg_closing_price,
+            "Initial Closing Price": initial_closing_price
+        })
+    
+    # Display insights as a table
+    insights_df = pd.DataFrame(insights)
+    st.write(insights_df)
+    
 def data_exploration():
-    data = pd.read_csv('all_stocks_5yr.csv')
-    names = list(data['Name'].unique())
-    selected_name = st.selectbox("Select Company", names)
-
-    if selected_name:
-        df = data_prep(data, selected_name)
-        st.write(df)
-        fig = go.Figure(data=[go.Candlestick(x=df['date'],
-            open=df['open'],
-            high=df['high'],
-            low=df['low'],
-            close=df['close'])])
-        fig.update_layout(title=f'{selected_name} Stock Price History')
-        st.plotly_chart(fig)
+    # Logic for data exploration will be implemented here
+    st.write("Data Exploration Placeholder")
 
 def strategy_simulation():
-    data = pd.read_csv('all_stocks_5yr.csv')
-    names = list(data['Name'].unique())
-    selected_name = st.selectbox("Select Company for Simulation", names)
+    # Strategy simulation logic will be implemented here
+    st.write("Strategy Simulation Placeholder")
 
-    if selected_name:
-        df = data_prep(data, selected_name)
-        initial_investment = st.number_input("Enter initial investment amount ($)", value=1000, min_value=100)
-        num_episodes = st.number_input("Enter number of episodes for simulation", value=100, min_value=1)
-
-        if st.button("Run Simulation"):
-            net_worth = test_stock(df, initial_investment, num_episodes)
-            plot_net_worth(net_worth, df)
-            performance_metrics = calculate_performance_metrics(net_worth, initial_investment)
-            display_performance_metrics(performance_metrics)
-
-if __name__ == "__main__":  # Corrected if statement
+if __name__ == "__main__":
     main()

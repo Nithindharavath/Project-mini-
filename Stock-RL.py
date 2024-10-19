@@ -126,7 +126,13 @@ def test_stock(stocks_test, initial_investment, num_episodes):
                 if num_stocks > 0:  # Only sell if we own stocks
                     num_stocks -= 1
                     net_worth += close_price
-                    reward = close_price - stocks_test['close'].iloc[t-1]  # Calculate profit/loss
+                    # Reward is calculated based on the profit/loss
+                    # The profit is the difference between selling price and the price when last bought
+                    if t > 0:  # Ensure there's a previous price to compare against
+                        previous_price = stocks_test['close'].iloc[t-1]  # Price at which the stock was last bought
+                        reward = close_price - previous_price  # Calculate profit/loss
+                    else:
+                        reward = close_price  # If this is the first sale, just return the selling price
 
             if num_stocks < 0:
                 num_stocks = 0
@@ -147,6 +153,7 @@ def test_stock(stocks_test, initial_investment, num_episodes):
         net_worth_history.append(net_worth)
 
     return net_worth_history
+
 
 
 # Function to plot net worth with a dynamic note

@@ -8,7 +8,7 @@ import torch.optim as optim
 import random
 from collections import deque
 
-class DQN(nn.Module)
+class DQN(nn.Module):
     def __init__(self, input_dim, output_dim):  # Missing colon
         super(DQN, self).__init__()
         self.fc1 = nn.Linear(input_dim, 64)

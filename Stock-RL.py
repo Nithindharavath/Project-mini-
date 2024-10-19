@@ -227,19 +227,12 @@ def home_page():
         final_price = df['close'].iloc[-1]
         initial_price = df['close'].iloc[0]
         trend = "Upward" if final_price > initial_price else "Downward"
-        trends.append(trend)
-    
-    selected_name = st.selectbox("Select Company Name", names)
+        trends.append({"Company": name, "Trend": trend})
 
-    if selected_name:
-        df = data_prep(data, selected_name)
-        st.write(df)
+    trends_df = pd.DataFrame(trends)
+    st.write("### Company Trends")
+    st.write(trends_df)
 
-        # Plot closing price
-        st.write("### Closing Price")
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=df['date'], y=df['close'], mode='lines', name='Close Price'))
-        st.plotly_chart(fig)
 def data_exploration():
     data = pd.read_csv('all_stocks_5yr.csv')
     names = list(data['Name'].unique())

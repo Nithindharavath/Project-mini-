@@ -8,8 +8,8 @@ import torch.optim as optim
 import random
 from collections import deque
 
-class DQN(nn.Module):
-    def __init__(self, input_dim, output_dim):  # Corrected the constructor name
+class DQN(nn.Module)
+    def __init__(self, input_dim, output_dim):  # Missing colon
         super(DQN, self).__init__()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
@@ -18,8 +18,7 @@ class DQN(nn.Module):
     def forward(self, x):
         x = torch.relu(self.fc1(x))
         x = torch.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
+        return x  # Missing return statement for the last layer
 
 # Initialize DQN
 input_dim = 3  # Number of state features

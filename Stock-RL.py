@@ -9,8 +9,8 @@ import random
 from collections import deque
 
 class DQN(nn.Module):
-    def _init_(self, input_dim, output_dim):
-        super(DQN, self)._init_()
+    def __init__(self, input_dim, output_dim):  # Correct __init__ method
+        super(DQN, self).__init__()  # Properly call the parent class constructor
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, output_dim)
@@ -21,14 +21,13 @@ class DQN(nn.Module):
         x = self.fc3(x)
         return x
 
+
 # Initialize DQN
-input_dim = 3  # Number of state features
-output_dim = 3  # Number of actions: Buy, Sell, Hold
+input_dim = 3  # Example: number of state features
+output_dim = 3  # Example: number of actions (Buy, Sell, Hold)
 dqn = DQN(input_dim, output_dim)
 target_dqn = DQN(input_dim, output_dim)
-target_dqn.load_state_dict(dqn.state_dict())
-optimizer = optim.Adam(dqn.parameters())
-loss_fn = nn.MSELoss()
+
 
 # Hyperparameters
 gamma = 0.99

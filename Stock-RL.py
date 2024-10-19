@@ -244,30 +244,35 @@ def home_page():
     st.write("### Company Trends")
     st.write(insights_df)
 
-    # Display a title for the graph
-    st.markdown("<h2 style='text-align: center;'>Top 5 Upward Trading Companies</h2>", unsafe_allow_html=True)
+    # Create two columns for layout
+    col1, col2 = st.columns([2, 1])  # Adjust column widths as needed
 
-    # Bar chart for the top 5 upward companies
-    if not top_upward_companies.empty:
-        fig = go.Figure()
-        fig.add_trace(go.Bar(
-            x=top_upward_companies['Company'],
-            y=top_upward_companies['Average Closing Price'],
-            marker_color='cyan'
-        ))
+    # Column 1: Table
+    with col1:
+        st.write(insights_df)
 
-        fig.update_layout(
-            title="Average Closing Prices of Top 5 Upward Companies",
-            xaxis_title="Company",
-            yaxis_title="Average Closing Price ($)",
-            plot_bgcolor='rgba(0, 0, 0, 0)',
-            title_font=dict(size=24, color='cyan'),
-            xaxis=dict(tickangle=-45, title_font=dict(size=16), tickfont=dict(size=14)),
-            yaxis=dict(title_font=dict(size=16), tickfont=dict(size=14)),
-            margin=dict(l=40, r=40, t=40, b=40)
-        )
+    # Column 2: Graph for the top 5 upward companies
+    with col2:
+        if not top_upward_companies.empty:
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=top_upward_companies['Company'],
+                y=top_upward_companies['Average Closing Price'],
+                marker_color='cyan'
+            ))
 
-        st.plotly_chart(fig, use_container_width=True)
+            fig.update_layout(
+                title="Avg Closing Prices of Top 5 Upward Companies",
+                xaxis_title="Company",
+                yaxis_title="Average Closing Price ($)",
+                plot_bgcolor='rgba(0, 0, 0, 0)',
+                title_font=dict(size=16, color='cyan'),
+                xaxis=dict(tickangle=-45, title_font=dict(size=14), tickfont=dict(size=12)),
+                yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
+                margin=dict(l=20, r=20, t=40, b=40)
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
 
     # Summary of potential profit for the top upward companies
     st.markdown("<h3 style='text-align: center;'>Performance Insights</h3>", unsafe_allow_html=True)
@@ -277,6 +282,7 @@ def home_page():
         st.write("----")  # Add a separator between companies
 
     st.markdown("<style>h1 {color: cyan;} h2 {color: white;} h3 {color: white;}</style>", unsafe_allow_html=True)
+
 
 def data_exploration():
     data = pd.read_csv('all_stocks_5yr.csv')

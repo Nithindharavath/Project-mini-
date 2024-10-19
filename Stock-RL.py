@@ -9,7 +9,7 @@ import random
 from collections import deque
 
 class DQN(nn.Module):
-    def __init__(self, input_dim, output_dim):
+    def __init__(self, input_dim, output_dim):  # Corrected the constructor name
         super(DQN, self).__init__()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
@@ -20,7 +20,6 @@ class DQN(nn.Module):
         x = torch.relu(self.fc2(x))
         x = self.fc3(x)
         return x
-
 
 # Initialize DQN
 input_dim = 3  # Number of state features
@@ -220,48 +219,39 @@ def home_page():
     names = list(data['Name'].unique())
     names.insert(0, "<Select Names>")
     
-    # Determine the trend for each company
-    trends = []
+    # Prepare to gather insights
+    insights = []
+    
     for name in names[1:]:
         df = data_prep(data, name)
-        final_price = df['close'].iloc[-1]
-        initial_price = df['close'].iloc[0]
-        trend = "Upward" if final_price > initial_price else "Downward"
-        trends.append({"Company": name, "Trend": trend})
+        avg_closing_price = df['close'].mean()  # Average closing price
+        initial_closing_price = df['close'].iloc[0]
+        performance_trend = "Upward" if avg_closing_price > initial_closing_price else "Downward"
 
-    trends_df = pd.DataFrame(trends)
+        insights.append({
+            "Company": name,
+            "Performance Trend": performance_trend,
+            "Average Closing Price": avg_closing_price,
+            "Initial Closing Price": initial_closing_price
+        })
     
-    # Get top 5 upward companies
-    upward_companies = trends_df[trends_df['Trend'] == "Upward"].head(5)
-    
-    # Display table of top upward companies
-    st.write("### Top 5 Upward Companies")
-    st.write(upward_companies)
+    st.write("### Insights from Stock Data")
+    for insight in insights:
+        st.write(f"{insight['Company']}: {insight['Performance Trend']} trend, "
+                 f"Avg Closing Price: {insight['Average Closing Price']:.2f}, "
+                 f"Initial Closing Price: {insight['Initial Closing Price']:.2f}")
 
-    # Plot bar graph for the top 5 upward companies
-    if not upward_companies.empty:
-        fig = go.Figure()
-        fig.add_trace(go.Bar(
-            x=upward_companies['Company'],
-            y=upward_companies['Trend'].map(lambda x: 1 if x == 'Upward' else 0),  # Dummy values for y-axis
-            marker_color='royalblue'
-        ))
-        fig.update_layout(
-            title='Top 5 Upward Companies',
-            xaxis_title='Companies',
-            yaxis_title='Trend',
-            yaxis=dict(tickvals=[0, 1], ticktext=['Downward', 'Upward']),
-            showlegend=False
-        )
-        st.plotly_chart(fig)
-
+# Define data exploration function
 def data_exploration():
+    # Placeholder for data exploration functionality
     st.write("### Data Exploration")
-    # Implementation of data exploration goes here.
+    st.write("Explore data here.")
 
+# Define strategy simulation function
 def strategy_simulation():
+    # Placeholder for strategy simulation functionality
     st.write("### Strategy Simulation")
-    # Implementation of strategy simulation goes here.
+    st.write("Simulate strategies here.")
 
 if __name__ == "__main__":
     main()

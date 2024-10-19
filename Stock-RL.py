@@ -220,20 +220,22 @@ def main():
 def home_page():
     data = pd.read_csv('all_stocks_5yr.csv')
     names = list(data['Name'].unique())
-    names.insert(0, "<Select Names>")
     
-    # Determine the trend for each company
+    # Initialize a list to store company trends
     trends = []
-    for name in names[1:]:
+
+    # Determine the trend for each company
+    for name in names:
         df = data_prep(data, name)
-        if df['close'].iloc[-1] < df['close'].iloc[0]:  # If the last close is lower than the first
-            trends.append(f"{name} is in a Downward Trend")
-        else:
-            trends.append(f"{name} is in an Upward Trend")
+        trend = "Upward Trend" if df['close'].iloc[-1] >= df['close'].iloc[0] else "Downward Trend"
+        trends.append({"Company": name, "Trend": trend})  # Append dictionary with company and trend
+
+    # Convert the trends list to a DataFrame
+    trends_df = pd.DataFrame(trends)
 
     st.write("### Company Trends")
-    for trend in trends:
-        st.write(trend)
+    st.table(trends_df)  # Display the trends DataFrame in tabular format
+
 
 def data_exploration():
     data = pd.read_csv('all_stocks_5yr.csv')

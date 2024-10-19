@@ -97,49 +97,46 @@ def update_target_network():
 def trade_t(num_of_stocks, port_value, current_price):
     return 1 if port_value > current_price else 0
 
-def test_stock(stocks_test, initial_investment, num_episodes):
+def test_stock(stocks_test, initial_investment):
     global epsilon
     net_worth_history = [initial_investment]
 
-    for episode in range(num_episodes):
-        state = get_state(stocks_test, 0)
-        total_reward = 0
-        num_stocks = 0
-        net_worth = initial_investment
+    state = get_state(stocks_test, 0)
+    total_reward = 0
+    num_stocks = 0
+    net_worth = initial_investment
 
-        for t in range(len(stocks_test) - 1):
-            action = next_act(state, epsilon, output_dim)
-            next_state = get_state(stocks_test, t + 1)
-            reward = 0
+    for t in range(len(stocks_test) - 1):
+        action = next_act(state, epsilon, output_dim)
+        next_state = get_state(stocks_test, t + 1)
+        reward = 0
 
-            close_price = stocks_test['close'].iloc[t]
-            if action == 0:  # Buy
-                num_stocks += 1
-                net_worth -= close_price
-                reward = -close_price
-            elif action == 1:  # Sell
-                num_stocks -= 1
-                net_worth += close_price
-                reward = close_price
+        close_price = stocks_test['close'].iloc[t]
+        if action == 0:  # Buy
+            num_stocks += 1
+            net_worth -= close_price
+            reward = -close_price
+        elif action == 1:  # Sell
+            num_stocks -= 1
+            net_worth += close_price
+            reward = close_price
 
-            if num_stocks < 0:
-                num_stocks = 0
+        if num_stocks < 0:
+            num_stocks = 0
 
-            done = t == len(stocks_test) - 2
-            total_reward += reward
-            remember(state, action, reward, next_state, done)
-            state = next_state
+        done = t == len(stocks_test) - 2
+        total_reward += reward
+        remember(state, action, reward, next_state, done)
+        state = next_state
 
-            if done:
-                break
+        if done:
+            break
 
-        epsilon = max(epsilon_end, epsilon_decay * epsilon)
-        replay()
-        if episode % update_target_every == 0:
-            update_target_network()
+    epsilon = max(epsilon_end, epsilon_decay * epsilon)
+    replay()
+    update_target_network()
 
-        net_worth_history.append(net_worth)
-
+    net_worth_history.append(net_worth)
     return net_worth_history
 
 def plot_net_worth(net_worth, stock_df):
@@ -248,11 +245,11 @@ def strategy_simulation():
 
     if selected_stock != "<Select Names>":
         initial_investment = st.number_input("Initial Investment ($)", min_value=0, value=10000)
-        num_episodes = st.number_input("Number of Episodes", min_value=1, value=10)
+        selected_year = st.number_input("Select Year (yyyy)", min_value=2018, max_value=2023, value=2023)
 
         if st.button("Start Simulation"):
-            stocks_test = data_prep(data, selected_stock)
-            net_worth_history = test_stock(stocks_test, initial_investment, num_episodes)
+            stocks_test = data_prep(data[data['date'].str.contains(str(selected_year))], selected_stock)
+            net_worth_history = test_stock(stocks_test, initial_investment)
             plot_net_worth(net_worth_history, stocks_test)
 
             metrics = calculate_performance_metrics(net_worth_history, initial_investment)

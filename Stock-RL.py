@@ -7,11 +7,10 @@ import torch.nn as nn
 import torch.optim as optim
 import random
 from collections import deque
-import requests
 
 class DQN(nn.Module):
-    def __init__(self, input_dim, output_dim):
-        super(DQN, self).__init__()
+    def _init_(self, input_dim, output_dim):
+        super(DQN, self)._init_()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, output_dim)
@@ -21,6 +20,7 @@ class DQN(nn.Module):
         x = torch.relu(self.fc2(x))
         x = self.fc3(x)
         return x
+
 
 # Initialize DQN
 input_dim = 3  # Number of state features
@@ -200,28 +200,22 @@ def display_performance_metrics(metrics):
     for key, value in metrics.items():
         st.write(f"{key}: {value:.2f}")
 
-# Function to fetch live stock price
-def get_live_stock_price(symbol, api_key):
-    url = 'https://www.alphavantage.co/query'
-    params = {
-        'function': 'TIME_SERIES_INTRADAY',
-        'symbol': symbol,
-        'interval': '1min',
-        'apikey': api_key
-    }
-    response = requests.get(url, params=params)
-    data = response.json()
+def main():
+    st.title("Enhancing Stock Trading Strategy Using Reinforcement Learning")
+    
+    tabs = ["Home", "Data Exploration", "Strategy Simulation"]
+    selected_tab = st.sidebar.selectbox("Select a tab", tabs)
 
-    try:
-        latest_timestamp = next(iter(data['Time Series (1min)']))
-        latest_price = data['Time Series (1min)'][latest_timestamp]['1. open']
-        return float(latest_price)
-    except KeyError:
-        st.error("Invalid symbol or data not available.")
-        return None
+    if selected_tab == "Home":
+        home_page()
+    
+    elif selected_tab == "Data Exploration":
+        data_exploration()
+    
+    elif selected_tab == "Strategy Simulation":
+        strategy_simulation()
 
 def home_page():
-    api_key = 'YOUR_API_KEY'  # Add your API key here
     data = pd.read_csv('all_stocks_5yr.csv')
     names = list(data['Name'].unique())
     names.insert(0, "<Select Names>")
@@ -232,7 +226,8 @@ def home_page():
     for name in names[1:]:
         df = data_prep(data, name)
         avg_closing_price = df['close'].mean()  # Average closing price
-        performance_trend = "Upward" if avg_closing_price > df['close'].iloc[0] else "Downward"
+        initial_closing_price = df['close'].iloc[0]
+        performance_trend = "Upward" if avg_closing_price > initial_closing_price else "Downward"
 
         insights.append({
             "Company": name,
@@ -240,43 +235,113 @@ def home_page():
             "Average Closing Price": avg_closing_price,
         })
 
+    # Create a DataFrame and sort it with upward companies first
     insights_df = pd.DataFrame(insights)
     insights_df['Upward Indicator'] = insights_df['Performance Trend'].apply(lambda x: 1 if x == "Upward" else 0)
     insights_df = insights_df.sort_values(by=['Upward Indicator', 'Average Closing Price'], ascending=[False, False]).drop(columns=['Upward Indicator'])
 
-    st.write("### Company Trends")
-    st.write(insights_df)
+    # Create a bar graph for the top 5 upward companies
+    top_upward_companies = insights_df[insights_df['Performance Trend'] == "Upward"].head(5)
 
-    # Fetch live prices for the companies
-    st.write("### Live Prices for Companies")
-    for index, row in insights_df.iterrows():
-        live_price = get_live_stock_price(row['Company'], api_key)
-        if live_price is not None:
-            st.write(f"**{row['Company']}**: ${live_price:.2f}")
+    # Create two columns for layout
+    col1, col2 = st.columns([2, 1])  # Adjust column widths as needed
 
-def strategy_simulation_page():
-    st.title("Strategy Simulation")
+    # Column 1: Display the insights table
+    with col1:
+        st.write("### Company Trends")
+        st.write(insights_df)
+
+    # Column 2: Display the bar graph for the top 5 upward companies
+    with col2:
+        if not top_upward_companies.empty:
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=top_upward_companies['Company'],
+                y=top_upward_companies['Average Closing Price'],
+                marker_color='royalblue'  # Professional color
+            ))
+
+            fig.update_layout(
+                title="Avg Closing Prices of Top 5 Upward Companies",
+                xaxis_title="Company",
+                yaxis_title="Average Closing Price ($)",
+                plot_bgcolor='rgba(0, 0, 0, 0)',
+                title_font=dict(size=16, color='darkslategray'),  # Professional color for title
+                xaxis=dict(tickangle=-45, title_font=dict(size=14), tickfont=dict(size=12)),
+                yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
+                margin=dict(l=20, r=20, t=40, b=40)
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+    # Optional: Style for headings
+    st.markdown("<style>h1 {color: darkslategray;} h2 {color: darkslategray;}</style>", unsafe_allow_html=True)
+
+
+
+def data_exploration():
+    data = pd.read_csv('all_stocks_5yr.csv')
+    names = list(data['Name'].unique())
+    names.insert(0, "<Select Names>")
     
-    stocks = st.selectbox("Select Stock:", options=names)
-    if stocks != "<Select Names>":
-        stock_data = data_prep(data, stocks)
-        num_episodes = st.number_input("Number of Episodes", min_value=1, value=10)
-        initial_investment = st.number_input("Initial Investment ($)", min_value=1, value=1000)
+    stock = st.sidebar.selectbox("Choose Company Stocks", names, index=0)
+    if stock != "<Select Names>":
+        stock_df = data_prep(data, stock)
+        
+        # Check if stock_df is not empty
+        if stock_df.empty:
+            st.warning(f"No data available for {stock}. Please select a different stock.")
+            return
+        
+        show_stock_trend(stock, stock_df)
 
-        if st.button("Run Simulation"):
-            net_worth = test_stock(stock_data, initial_investment, num_episodes)
-            plot_net_worth(net_worth, stock_data)
-            metrics = calculate_performance_metrics(net_worth, initial_investment)
+def show_stock_trend(stock, stock_df):
+    st.write(f"### {stock} Stock Trends")
+    
+    # Check if 'date' and 'close' columns exist
+    if 'date' in stock_df.columns and 'close' in stock_df.columns:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Close Price', line=dict(color='cyan')))
+        fig.update_layout(title=f"{stock} Stock Closing Price", xaxis_title="Date", yaxis_title="Price ($)")
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Trend note logic
+        if stock_df['close'].iloc[-1] > stock_df['close'].iloc[0]:
+            trend_note = 'Stock is on a solid upward trend. Investing here might be profitable.'
+        else:
+            trend_note = 'Stock has been trending downwards. Caution is advised.'
+        
+        st.markdown(f"Trend Note: {trend_note}")
+    else:
+        st.error(f"Data for {stock} is missing required columns.")
+
+        
+
+def strategy_simulation():
+    data = pd.read_csv('all_stocks_5yr.csv')
+    names = list(data['Name'].unique())
+    selected_name = st.selectbox("Select Company Name", names)
+
+    if selected_name:
+        df = data_prep(data, selected_name)
+        
+        # Get unique years from the dataset for dynamic selection
+        df['date'] = pd.to_datetime(df['date'])
+        years = df['date'].dt.year.unique().tolist()
+        years.sort()
+
+        # Year selection based on dataset
+        selected_year = st.selectbox("Select Year", years)
+
+        # Filter data based on selected year
+        df_selected_year = df[df['date'].dt.year == selected_year]
+
+        initial_investment = st.number_input("Enter your initial investment ($)", value=1000, step=100)
+        if st.button("Start Simulation"):
+            net_worth_history = test_stock(df_selected_year, initial_investment, num_episodes=100)
+            plot_net_worth(net_worth_history, df_selected_year)
+            metrics = calculate_performance_metrics(net_worth_history, initial_investment)
             display_performance_metrics(metrics)
 
-def main():
-    st.sidebar.title("Navigation")
-    page = st.sidebar.selectbox("Choose a page:", ["Home", "Strategy Simulation"])
-
-    if page == "Home":
-        home_page()
-    elif page == "Strategy Simulation":
-        strategy_simulation_page()
-
-if __name__ == "__main__":
+if _name_ == "_main_":
     main()

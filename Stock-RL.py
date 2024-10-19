@@ -187,6 +187,7 @@ def plot_net_worth(net_worth, stock_df):
 
 
 # Function to plot net worth with a dynamic note
+# Function to plot net worth with a dynamic note
 def plot_net_worth(net_worth, stock_df):
     net_worth_df = pd.DataFrame(net_worth, columns=['value'])
     
@@ -211,11 +212,13 @@ def plot_net_worth(net_worth, stock_df):
     
     # Display a note based on net worth increase or decrease
     if end_net_worth > start_net_worth:
-        st.markdown("<span style='color:green; font-size: 20px;'>NOTE:<br> "
-                    "Increase in your net worth as a result of model decisions.</span>", unsafe_allow_html=True)
+        note_color = "green"  # Color for increase
+        note_text = "Increase in your net worth as a result of model decisions."
     else:
-        st.markdown("<span style='color:red; font-size: 20px;'>NOTE:<br> "
-                    "Decrease in your net worth as a result of model decisions.</span>", unsafe_allow_html=True)
+        note_color = "red"  # Color for decrease
+        note_text = "Decrease in your net worth as a result of model decisions."
+    
+    st.markdown(f"<b style='color:{note_color}; font-size: 20px;'>NOTE:</b> <span style='color:blue; font-size: 20px;'>{note_text}</span>", unsafe_allow_html=True)
 
 
 # Function to calculate performance metrics

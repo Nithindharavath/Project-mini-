@@ -120,11 +120,12 @@ def test_stock(stocks_test, initial_investment, num_episodes):
             if action == 0:  # Buy
                 num_stocks += 1
                 net_worth -= close_price
-                reward = -close_price
+                reward = -close_price  # Penalize for buying
             elif action == 1:  # Sell
-                num_stocks -= 1
-                net_worth += close_price
-                reward = close_price
+                if num_stocks > 0:  # Only sell if we own stocks
+                    num_stocks -= 1
+                    net_worth += close_price
+                    reward = close_price  # Reward for selling
 
             if num_stocks < 0:
                 num_stocks = 0
@@ -184,7 +185,7 @@ def calculate_performance_metrics(net_worth, initial_investment):
     annualized_return = (net_worth[-1] / initial_investment) ** (365 / len(net_worth)) - 1
     daily_returns = np.diff(net_worth) / net_worth[:-1]
     volatility = np.std(daily_returns)
-    sharpe_ratio = annualized_return / volatility
+    sharpe_ratio = annualized_return / volatility if volatility != 0 else 0  # Prevent division by zero
 
     return {
         "Total Return": returns,
@@ -197,7 +198,7 @@ def calculate_performance_metrics(net_worth, initial_investment):
 def display_performance_metrics(metrics):
     st.write("### Performance Metrics")
     for key, value in metrics.items():
-        st.write(f"{key}:{value:.2f}")
+        st.write(f"{key}: {value:.2f}")
 
 def main():
     st.title("Enhancing Stock Trading Strategy Using Reinforcement Learning")
@@ -226,15 +227,8 @@ def home_page():
         final_price = df['close'].iloc[-1]
         initial_price = df['close'].iloc[0]
         trend = "Upward" if final_price > initial_price else "Downward"
-        trends.append({"Company": name, "Trend": trend})
-
-    trends_df = pd.DataFrame(trends)
-    st.write("### Company Trends")
-    st.write(trends_df)
-
-def data_exploration():
-    data = pd.read_csv('all_stocks_5yr.csv')
-    names = list(data['Name'].unique())
+        trends.append(trend)
+    
     selected_name = st.selectbox("Select Company Name", names)
 
     if selected_name:

@@ -227,11 +227,15 @@ def home_page():
         final_price = df['close'].iloc[-1]
         initial_price = df['close'].iloc[0]
         trend = "Upward" if final_price > initial_price else "Downward"
-        trends.append({"Company": name, "Trend": trend})
+        trends.append({"Company": name, "Trend": trend, "Ending Price": final_price})
 
+    # Create a DataFrame and sort by Ending Price
     trends_df = pd.DataFrame(trends)
-    st.write("### Company Trends")
+    trends_df = trends_df.sort_values(by="Ending Price", ascending=False)
+
+    st.write("### Top Trading Companies")
     st.write(trends_df)
+
 
 def data_exploration():
     data = pd.read_csv('all_stocks_5yr.csv')

@@ -330,27 +330,62 @@ def data_exploration():
     stock = st.sidebar.selectbox("Choose Company Stocks", names, index=0)
     if stock != "<Select Names>":
         stock_df = data_prep(data, stock)
-        
+
         # Check if stock_df is not empty
         if stock_df.empty:
             st.warning(f"No data available for {stock}. Please select a different stock.")
             return
-        
-        show_stock_trend(stock, stock_df)
+
+        # Descriptive statistics
+        st.write("### Descriptive Statistics")
+        st.write(stock_df.describe())
+
+        # Date range selection
+        start_date = stock_df['date'].min()
+        end_date = stock_df['date'].max()
+        selected_dates = st.date_input("Select Date Range", [start_date, end_date], min_value=start_date, max_value=end_date)
+
+        # Filter data based on selected date range
+        stock_df['date'] = pd.to_datetime(stock_df['date'])
+        mask = (stock_df['date'] >= pd.to_datetime(selected_dates[0])) & (stock_df['date'] <= pd.to_datetime(selected_dates[1]))
+        filtered_stock_df = stock_df.loc[mask]
+
+        # Check if filtered data is available
+        if filtered_stock_df.empty:
+            st.warning("No data available for the selected date range.")
+            return
+
+        show_stock_trend(stock, filtered_stock_df)
+
+        # Additional interactive chart option
+        chart_type = st.selectbox("Select Chart Type", ["Line Chart", "Bar Chart"])
+        if chart_type == "Line Chart":
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=filtered_stock_df['date'], y=filtered_stock_df['close'], mode='lines', name='Close Price', line=dict(color='cyan')))
+        else:
+            fig = go.Figure()
+            fig.add_trace(go.Bar(x=filtered_stock_df['date'], y=filtered_stock_df['close'], name='Close Price', marker_color='royalblue'))
+
+        fig.update_layout(title=f"{stock} Stock Closing Price ({selected_dates[0]} to {selected_dates[1]})", xaxis_title="Date", yaxis_title="Price ($)")
+        st.plotly_chart(fig, use_container_width=True)
+
 def show_stock_trend(stock, stock_df):
     st.write(f"### {stock} Stock Trends")
     
     # Check if 'date' and 'close' columns exist
     if 'date' in stock_df.columns and 'close' in stock_df.columns:
+        # Add tooltips on data points
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Close Price', line=dict(color='cyan')))
+        fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines+markers', name='Close Price', line=dict(color='cyan'), 
+                                 hoverinfo='text', text=stock_df['close'].round(2).astype(str)))
+
         fig.update_layout(title=f"{stock} Stock Closing Price", xaxis_title="Date", yaxis_title="Price ($)")
         st.plotly_chart(fig, use_container_width=True)
         
         # Trend note logic
         if stock_df['close'].iloc[-1] > stock_df['close'].iloc[0]:
             trend_note = 'Stock is on a solid upward trend. Investing here might be profitable.'
-        elif stock_df['close'].iloc[-1] < stock_df['close'].iloc[0]:  # Added this condition
+        elif stock_df['close'].iloc[-1] < stock_df['close'].iloc[0]:
             trend_note = 'Stock has been trending downwards. Caution is advised.'
         else:
             trend_note = 'Stock price has remained stable.'
@@ -359,7 +394,6 @@ def show_stock_trend(stock, stock_df):
     else:
         st.error(f"Data for {stock} is missing required columns.")
 
-        
 
 def strategy_simulation():
     data = pd.read_csv('all_stocks_5yr.csv')

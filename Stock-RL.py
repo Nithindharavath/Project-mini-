@@ -230,8 +230,30 @@ def home_page():
         trends.append({"Company": name, "Trend": trend})
 
     trends_df = pd.DataFrame(trends)
-    st.write("### Company Trends")
-    st.write(trends_df)
+    
+    # Get top 5 upward companies
+    upward_companies = trends_df[trends_df['Trend'] == "Upward"].head(5)
+    
+    # Display table of top upward companies
+    st.write("### Top 5 Upward Companies")
+    st.write(upward_companies)
+
+    # Plot bar graph for the top 5 upward companies
+    if not upward_companies.empty:
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            x=upward_companies['Company'],
+            y=upward_companies['Trend'].map(lambda x: 1 if x == 'Upward' else 0),  # Dummy values for y-axis
+            marker_color='royalblue'
+        ))
+        fig.update_layout(
+            title='Top 5 Upward Companies',
+            xaxis_title='Companies',
+            yaxis_title='Trend',
+            yaxis=dict(tickvals=[0, 1], ticktext=['Downward', 'Upward']),
+            showlegend=False
+        )
+        st.plotly_chart(fig)
 
 def data_exploration():
     st.write("### Data Exploration")

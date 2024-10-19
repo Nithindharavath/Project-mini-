@@ -309,9 +309,11 @@ def show_stock_trend(stock, stock_df):
         # Trend note logic
         if stock_df['close'].iloc[-1] > stock_df['close'].iloc[0]:
             trend_note = 'Stock is on a solid upward trend. Investing here might be profitable.'
-        else:
+        elif stock_df['close'].iloc[-1] < stock_df['close'].iloc[0]:  # Added this condition
             trend_note = 'Stock has been trending downwards. Caution is advised.'
-        
+        else:
+            trend_note = 'Stock price has remained stable.'
+
         st.markdown(f"Trend Note: {trend_note}")
     else:
         st.error(f"Data for {stock} is missing required columns.")

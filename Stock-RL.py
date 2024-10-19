@@ -116,6 +116,7 @@ def test_stock(stocks_test, initial_investment, num_episodes):
             action = next_act(state, epsilon, output_dim)
             next_state = get_state(stocks_test, t + 1)
             reward = 0
+            done = False  # Initialize done
 
             close_price = stocks_test['close'].iloc[t]
             if action == 0:  # Buy
@@ -141,12 +142,17 @@ def test_stock(stocks_test, initial_investment, num_episodes):
             net_worth_history.append(current_value)
             state = next_state
 
+            # Mark the episode as done at the last time step
+            if t == len(stocks_test) - 2:
+                done = True
+
         epsilon = max(epsilon_end, epsilon_decay * epsilon)
         replay()
         if episode % update_target_every == 0:
             update_target_network()
 
     return net_worth_history
+
 
 
 def plot_net_worth(net_worth, stock_df):

@@ -240,6 +240,30 @@ def home_page():
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=df['date'], y=df['close'], mode='lines', name='Close Price'))
         st.plotly_chart(fig)
+def data_exploration():
+    data = pd.read_csv('all_stocks_5yr.csv')
+    names = list(data['Name'].unique())
+    names.insert(0, "<Select Names>")
+    
+    stock = st.sidebar.selectbox("Choose Company Stocks", names, index=0)
+    if stock != "<Select Names>":
+        stock_df = data_prep(data, stock)
+        show_stock_trend(stock, stock_df)
+
+def show_stock_trend(stock, stock_df):
+    st.write(f"### {stock} Stock Trends")
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Close Price', line=dict(color='cyan')))  # Changed line color to cyan
+    fig.update_layout(title=f"{stock} Stock Closing Price", xaxis_title="Date", yaxis_title="Price ($)")
+    st.plotly_chart(fig, use_container_width=True)
+    
+    if stock_df['close'].iloc[-1] > stock_df['close'].iloc[0]:
+        trend_note = 'Stock is on a solid upward trend. Investing here might be profitable.'
+    else:
+        trend_note = 'Stock has been trending downwards. Caution is advised.'
+    
+    st.markdown(f"*Trend Note*: {trend_note}")
+        
 
 def strategy_simulation():
     data = pd.read_csv('all_stocks_5yr.csv')

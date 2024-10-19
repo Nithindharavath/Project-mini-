@@ -247,21 +247,22 @@ def strategy_simulation():
     st.write("### Strategy Simulation")
     data = pd.read_csv('all_stocks_5yr.csv')
     name = st.selectbox("Select Company", list(data['Name'].unique()))
+    
+    # Get the unique years from the dataset
+    data['year'] = pd.to_datetime(data['date']).dt.year
+    unique_years = sorted(data['year'].unique())
+    
+    # Select year instead of episodes
+    year = st.selectbox("Select Year", unique_years)
+    
+    # Filter data for the selected year
+    df_year = data[data['year'] == year]
     initial_investment = st.number_input("Initial Investment", min_value=1, value=10000)
-    
-    # Input for years instead of episodes
-    num_years = st.number_input("Number of Years for Simulation", min_value=1, value=1)
-    
-    df = data_prep(data, name)
-    
-    # Calculate number of episodes based on selected years
-    total_days = len(df)
-    episodes_per_year = total_days // 252  # Assuming approximately 252 trading days in a year
-    num_episodes = episodes_per_year * num_years
 
     if st.button("Run Simulation"):
-        net_worth_history = test_stock(df, initial_investment, num_episodes)
-        plot_net_worth(net_worth_history, df)
+        # Simulate with data for the selected year
+        net_worth_history = test_stock(df_year, initial_investment, num_episodes=1)  # Set num_episodes to 1 for the specific year
+        plot_net_worth(net_worth_history, df_year)
         metrics = calculate_performance_metrics(net_worth_history, initial_investment)
         display_performance_metrics(metrics)
 

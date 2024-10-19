@@ -227,59 +227,39 @@ def home_page():
         df = data_prep(data, name)
         avg_closing_price = df['close'].mean()  # Average closing price
         initial_closing_price = df['close'].iloc[0]
-        performance_trend = "Rising" if avg_closing_price > initial_closing_price else "Falling"
+        performance_trend = "Upward" if avg_closing_price > initial_closing_price else "Downward"
 
         # Calculate 30-day moving average for recent performance assessment
         df['30day_MA'] = df['close'].rolling(window=30).mean()
         recent_movement = "Positive" if df['30day_MA'].iloc[-1] > df['30day_MA'].iloc[-2] else "Negative"
 
         # Determine potential for profit based on trends and recent performance
-        if performance_trend == "Rising" and recent_movement == "Positive":
-            potential_profit = "Highly Favorable"
-        elif performance_trend == "Falling" and recent_movement == "Negative":
-            potential_profit = "Not Recommended"
+        if performance_trend == "Upward" and recent_movement == "Positive":
+            potential_profit = "High Probability of Profit"
+        elif performance_trend == "Downward" and recent_movement == "Negative":
+            potential_profit = "Low Probability of Profit"
         else:
-            potential_profit = "Watch Closely"
-
-        # Include volatility and max drawdown
-        price_volatility = df['close'].std()
-        max_drawdown = (df['close'].max() - df['close'].min()) / df['close'].max()
+            potential_profit = "Monitor Closely"
 
         insights.append({
             "Company": name,
             "Performance Trend": performance_trend,
             "Average Closing Price": avg_closing_price,
             "Potential Profit": potential_profit,
-            "Price Volatility": price_volatility,
-            "Max Drawdown (%)": max_drawdown * 100  # Convert to percentage
         })
 
     # Create a DataFrame and sort by Average Closing Price
     insights_df = pd.DataFrame(insights)
     insights_df = insights_df.sort_values(by="Average Closing Price", ascending=False)
 
-    # Create interactive visualizations using Plotly
-    fig = go.Figure()
-    fig.add_trace(go.Bar(x=insights_df['Company'], y=insights_df['Average Closing Price'], name='Avg Closing Price'))
-    fig.add_trace(go.Scatter(x=insights_df['Company'], y=insights_df['Max Drawdown (%)'], mode='lines+markers', name='Max Drawdown (%)', yaxis='y2'))
+    st.write("### Top Trading Companies")
+    st.write(insights_df)
 
-    # Update layout for dual-axis chart
-    fig.update_layout(
-        title="Company Performance Overview",
-        xaxis_title="Company",
-        yaxis_title="Average Closing Price ($)",
-        yaxis2=dict(title="Max Drawdown (%)", overlaying='y', side='right'),
-        barmode='group'
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-    st.write("### Insights Summary")
+    st.write("### Summary of Potential Profit")
     for index, row in insights_df.iterrows():
-        st.write(f"**{row['Company']}**: {row['Potential Profit']} based on historical trends.")
+        st.write(f"**{row['Company']}**: {row['Potential Profit']}.")
         st.write(f"- **Performance Trend**: {row['Performance Trend']}")
         st.write(f"- **Average Closing Price**: ${row['Average Closing Price']:.2f}")
-        st.write(f"- **Price Volatility (Std. Dev.)**: ${row['Price Volatility']:.2f}")
-        st.write(f"- **Max Drawdown**: {row['Max Drawdown (%)']:.2f}%")
         st.write("----")  # Add a separator between companies
 
 def data_exploration():

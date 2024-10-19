@@ -238,32 +238,44 @@ def home_page():
 
 
 def strategy_simulation():
-    data = pd.read_csv('all_stocks_5yr.csv')
-    data['date'] = pd.to_datetime(data['date'])  # Ensure 'date' is in datetime format
-
-    # Let the user select the stock and year
-    stock = st.sidebar.selectbox("Choose Company Stocks", data['Name'].unique())
-    selected_year = st.sidebar.selectbox("Select Year", options=list(range(2013, 2019)))  # 2013-2018
-
-    # Prepare the data for the selected stock and year
-    stock_df = data_prep(data, stock)
-    stock_df = stock_df[stock_df['date'].dt.year == selected_year]  # Filter data for the selected year
-
-    invest = st.sidebar.number_input("Enter Your Investment Amount", min_value=1, value=1000)
+    st.write("### Strategy Simulation")
     
-    if st.sidebar.button("Start Simulation", key=2):
-        num_episodes = 50  # Number of episodes for training
-        net_worth_history = test_stock(stock_df, invest, num_episodes)
-        
-        # Display the performance metrics
-        metrics = calculate_performance_metrics(net_worth_history, invest)
-        display_performance_metrics(metrics)
+    # Load the stock data
+    data = pd.read_csv('all_stocks_5yr.csv')
+    
+    # Convert the 'date' column to datetime format
+    data['date'] = pd.to_datetime(data['date'], errors='coerce')
+    
+    # Let the user select the company and year
+    name = st.selectbox("Select Company", list(data['Name'].unique()))
+    selected_year = st.selectbox("Select Year (yyyy)", options=list(range(2013, 2019)))  # Options for years 2013-2018
+    initial_investment = st.number_input("Initial Investment", min_value=1, value=10000)
+
+    # Prepare the data for the selected stock
+    df = data_prep(data, name)
+    
+    # Filter the data for the selected year
+    df_year = df[df['date'].dt.year == selected_year]
+
+    # Check if there is data for the selected year
+    if df_year.empty:
+        st.warning("No data available for the selected year.")
+        return
+
+    # Calculate number of episodes based on the filtered data
+    total_days = len(df_year)
+    episodes_per_year = total_days // 252  # Assuming approximately 252 trading days in a year
+    num_episodes = episodes_per_year  # Set to the number of episodes based on available trading days
+
+    if st.button("Run Simulation"):
+        net_worth_history = test_stock(df_year, initial_investment, num_episodes)
         
         # Plot the portfolio value over the selected year
-        plot_net_worth(net_worth_history, stock_df)
-
-
-
+        plot_net_worth(net_worth_history, df_year)
+        
+        # Display performance metrics
+        metrics = calculate_performance_metrics(net_worth_history, initial_investment)
+        display_performance_metrics(metrics)
 
 if __name__ == "__main__":
     main()

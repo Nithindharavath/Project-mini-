@@ -214,18 +214,17 @@ def display_performance_metrics(metrics):
 
 def main():
     st.title("Enhancing Stock Trading Strategy Using Reinforcement Learning")
-    
+
     tabs = ["Home", "Data Exploration", "Strategy Simulation"]
     selected_tab = st.sidebar.selectbox("Select a tab", tabs)
 
-    if selected_tab == "Home":
-        home_page()
-    
-    elif selected_tab == "Data Exploration":
-        data_exploration()
-    
-    elif selected_tab == "Strategy Simulation":
-        strategy_simulation()
+    # Comment out the tab selection to isolate the error
+    # if selected_tab == "Home":
+    #     home_page()
+    # elif selected_tab == "Data Exploration":
+    #     data_exploration()
+    # elif selected_tab == "Strategy Simulation":
+    #     strategy_simulation()
 
 def home_page():
     data = pd.read_csv('all_stocks_5yr.csv')

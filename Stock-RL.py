@@ -8,10 +8,9 @@ import torch.optim as optim
 import random
 from collections import deque
 
-# Define DQN Model
 class DQN(nn.Module):
-    def _init(self, input_dim, output_dim):  # Corrected __init_ method
-        super(DQN, self)._init_()
+    def __init__(self, input_dim, output_dim):  # Corrected __init__ method
+        super(DQN, self).__init__()  # Ensure the superclass is initialized properly
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, output_dim)
@@ -21,6 +20,7 @@ class DQN(nn.Module):
         x = torch.relu(self.fc2(x))
         x = self.fc3(x)
         return x
+
 
 # Initialize DQN
 input_dim = 3  # Number of state features

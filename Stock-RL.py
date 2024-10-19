@@ -101,52 +101,34 @@ def update_target_network():
 def trade_t(num_of_stocks, port_value, current_price):
     return 1 if port_value > current_price else 0
 
-def test_stock(stocks_test, initial_investment, num_episodes):
-    global epsilon
-    net_worth_history = [initial_investment]
+def test_stock(stock_df, initial_investment, num_episodes):
+    net_worth_history = []
 
+    # Assume `stock_df` is sorted by date
     for episode in range(num_episodes):
-        state = get_state(stocks_test, 0)
-        total_reward = 0
-        num_stocks = 0
-        net_worth = initial_investment
+        current_investment = initial_investment
+        previous_price = stock_df['close'].iloc[0]  # Initial price
 
-        for t in range(len(stocks_test) - 1):
-            action = next_act(state, epsilon, output_dim)
-            next_state = get_state(stocks_test, t + 1)
-            reward = 0
+        for t in range(len(stock_df)):
+            current_price = stock_df['close'].iloc[t]
+            
+            # Implement your trading strategy here
+            # Example of buying/selling logic (this should be based on your model)
+            if t > 0:  # Avoid first iteration where there's no previous price
+                if current_price < previous_price:  # If current price is less than previous price
+                    reward = -1  # Negative reward for downward movement
+                else:
+                    reward = 1  # Positive reward for upward movement
 
-            close_price = stocks_test['close'].iloc[t]
-            if action == 0:  # Buy
-                num_stocks += 1
-                net_worth -= close_price
-                reward = -close_price  # Negative reward for buying
-            elif action == 1:  # Sell
-                if num_stocks > 0:  # Only sell if there are stocks
-                    num_stocks -= 1
-                    net_worth += close_price
-                    reward = close_price  # Positive reward for selling
+                # Update current investment based on the action taken
+                current_investment += reward  # Modify this based on your logic
 
-            if num_stocks < 0:
-                num_stocks = 0
+            previous_price = current_price  # Update previous price for the next iteration
 
-            done = t == len(stocks_test) - 2
-            total_reward += reward
-            remember(state, action, reward, next_state, done)
-            state = next_state
-
-            if done:
-                break
-
-        # Update epsilon
-        epsilon = max(epsilon_end, epsilon_decay * epsilon)
-        replay()
-        if episode % update_target_every == 0:
-            update_target_network()
-
-        net_worth_history.append(net_worth)
+        net_worth_history.append(current_investment)
 
     return net_worth_history
+
 
 # Function to plot net worth with a dynamic note
 def plot_net_worth(net_worth, stock_df):
@@ -242,40 +224,28 @@ def strategy_simulation():
     
     # Load the stock data
     data = pd.read_csv('all_stocks_5yr.csv')
+    data['date'] = pd.to_datetime(data['date'])  # Ensure 'date' is in datetime format
+
+    # Let the user select the stock and year
+    stock = st.sidebar.selectbox("Choose Company Stocks", data['Name'].unique())
+    selected_year = st.sidebar.selectbox("Select Year", options=list(range(2013, 2019)))  # 2013-2018
+
+    # Prepare the data for the selected stock and year
+    stock_df = data_prep(data, stock)
+    stock_df = stock_df[stock_df['date'].dt.year == selected_year]  # Filter data for the selected year
+
+    invest = st.sidebar.number_input("Enter Your Investment Amount", min_value=1, value=1000)
     
-    # Convert the 'date' column to datetime format
-    data['date'] = pd.to_datetime(data['date'], errors='coerce')
-    
-    # Let the user select the company and year
-    name = st.selectbox("Select Company", list(data['Name'].unique()))
-    selected_year = st.selectbox("Select Year (yyyy)", options=list(range(2013, 2019)))  # Options for years 2013-2018
-    initial_investment = st.number_input("Initial Investment", min_value=1, value=10000)
-
-    # Prepare the data for the selected stock
-    df = data_prep(data, name)
-    
-    # Filter the data for the selected year
-    df_year = df[df['date'].dt.year == selected_year]
-
-    # Check if there is data for the selected year
-    if df_year.empty:
-        st.warning("No data available for the selected year.")
-        return
-
-    # Calculate number of episodes based on the filtered data
-    total_days = len(df_year)
-    episodes_per_year = total_days // 252  # Assuming approximately 252 trading days in a year
-    num_episodes = episodes_per_year  # Set to the number of episodes based on available trading days
-
-    if st.button("Run Simulation"):
-        net_worth_history = test_stock(df_year, initial_investment, num_episodes)
+    if st.sidebar.button("Start Simulation", key=2):
+        num_episodes = 50  # Number of episodes for training
+        net_worth_history = test_stock(stock_df, invest, num_episodes)
+        
+        # Display the performance metrics
+        metrics = calculate_performance_metrics(net_worth_history, invest)
+        display_performance_metrics(metrics)
         
         # Plot the portfolio value over the selected year
-        plot_net_worth(net_worth_history, df_year)
-        
-        # Display performance metrics
-        metrics = calculate_performance_metrics(net_worth_history, initial_investment)
-        display_performance_metrics(metrics)
+        plot_net_worth(net_worth_history, stock_df)
 
 if __name__ == "__main__":
     main()

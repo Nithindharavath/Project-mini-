@@ -120,11 +120,12 @@ def test_stock(stocks_test, initial_investment, num_episodes):
             if action == 0:  # Buy
                 num_stocks += 1
                 net_worth -= close_price
-                reward = -close_price
+                reward = -close_price  # Negative reward for buying
             elif action == 1:  # Sell
-                num_stocks -= 1
-                net_worth += close_price
-                reward = close_price
+                if num_stocks > 0:  # Only sell if there are stocks
+                    num_stocks -= 1
+                    net_worth += close_price
+                    reward = close_price  # Positive reward for selling
 
             if num_stocks < 0:
                 num_stocks = 0
@@ -137,6 +138,7 @@ def test_stock(stocks_test, initial_investment, num_episodes):
             if done:
                 break
 
+        # Update epsilon
         epsilon = max(epsilon_end, epsilon_decay * epsilon)
         replay()
         if episode % update_target_every == 0:
@@ -148,8 +150,10 @@ def test_stock(stocks_test, initial_investment, num_episodes):
 
 # Function to plot net worth with a dynamic note
 def plot_net_worth(net_worth, stock_df):
+    # Filter stock_df to ensure it's within the correct date range
     net_worth_df = pd.DataFrame(net_worth, columns=['value'])
     
+    # Ensure there are enough dates for plotting
     if len(stock_df) > len(net_worth_df):
         stock_df = stock_df.iloc[:len(net_worth_df)]  # Align with the length of the net worth history
 
@@ -176,8 +180,6 @@ def plot_net_worth(net_worth, stock_df):
         st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> '
                     'Decrease in your net worth as a result of model decisions.</p>', unsafe_allow_html=True)
 
-
-
 # Function to calculate performance metrics
 def calculate_performance_metrics(net_worth, initial_investment):
     net_worth = np.array(net_worth)
@@ -198,7 +200,7 @@ def calculate_performance_metrics(net_worth, initial_investment):
 def display_performance_metrics(metrics):
     st.write("### Performance Metrics")
     for key, value in metrics.items():
-        st.write(f"{key}:{value:.2f}")
+        st.write(f"{key}: {value:.2f}")
 
 def main():
     st.title("Enhancing Stock Trading Strategy Using Reinforcement Learning")
@@ -224,53 +226,37 @@ def home_page():
     trends = []
     for name in names[1:]:
         df = data_prep(data, name)
-        final_price = df['close'].iloc[-1]
-        initial_price = df['close'].iloc[0]
-        trend = "Upward" if final_price > initial_price else "Downward"
-        trends.append({"Company": name, "Trend": trend})
+        if df['close'].iloc[-1] < df['close'].iloc[0]:  # If the last close is lower than the first
+            trends.append(f"{name} is in a Downward Trend")
+        else:
+            trends.append(f"{name} is in an Upward Trend")
 
-    trends_df = pd.DataFrame(trends)
-    
-    # Show trends in a table
     st.write("### Company Trends")
-    st.dataframe(trends_df)
+    for trend in trends:
+        st.write(trend)
 
 def data_exploration():
     data = pd.read_csv('all_stocks_5yr.csv')
-    selected_name = st.selectbox("Select Stock", data['Name'].unique())
+    name = st.selectbox("Select Company", list(data['Name'].unique()))
+    df = data_prep(data, name)
+    st.write(df)
 
-    if selected_name:
-        df = data_prep(data, selected_name)
-        st.write("### Stock Price Data")
-        st.line_chart(df['close'])
-
-# Strategy Simulation
 def strategy_simulation():
+    st.write("### Strategy Simulation")
     data = pd.read_csv('all_stocks_5yr.csv')
-    names = data['Name'].unique()
-    selected_name = st.selectbox("Select Stock for Simulation", names)
+    name = st.selectbox("Select Company", list(data['Name'].unique()))
+    initial_investment = st.number_input("Initial Investment", min_value=1, value=10000)
+    num_episodes = st.number_input("Number of Episodes", min_value=1, value=10)
 
-    if selected_name:
-        stock_data = data_prep(data, selected_name)
-        initial_investment = st.number_input("Enter Initial Investment", min_value=0.0, value=1000.0)
-
-        # Check if the selected stock is in a downward trend
-        final_price = stock_data['close'].iloc[-1]
-        initial_price = stock_data['close'].iloc[0]
-        trend = "Upward" if final_price > initial_price else "Downward"
-
-        if trend == "Downward":
-            st.warning("Warning: The selected stock is in a downward trend. Investing in it may lead to losses.")
-
-        if st.button("Start Simulation"):
-            num_episodes = st.number_input("Select Number of Episodes", min_value=1, value=10)
-            net_worth_history = test_stock(stock_data, initial_investment, num_episodes)
-            plot_net_worth(net_worth_history, stock_data)
-
-            # Calculate and display performance metrics
-            metrics = calculate_performance_metrics(net_worth_history, initial_investment)
-            display_performance_metrics(metrics)
+    df = data_prep(data, name)
+    
+    if st.button("Run Simulation"):
+        net_worth_history = test_stock(df, initial_investment, num_episodes)
+        plot_net_worth(net_worth_history, df)
+        metrics = calculate_performance_metrics(net_worth_history, initial_investment)
+        display_performance_metrics(metrics)
 
 if __name__ == "__main__":
     main()
+
 

@@ -9,7 +9,7 @@ import random
 from collections import deque
 
 class DQN(nn.Module):
-    def __init__(self, input_dim, output_dim):  
+    def __init__(self, input_dim, output_dim):
         super(DQN, self).__init__()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
@@ -23,8 +23,8 @@ class DQN(nn.Module):
 
 
 # Initialize DQN
-input_dim = 3
-output_dim = 3  
+input_dim = 3  # Number of state features
+output_dim = 3  # Number of actions: Buy, Sell, Hold
 dqn = DQN(input_dim, output_dim)
 target_dqn = DQN(input_dim, output_dim)
 target_dqn.load_state_dict(dqn.state_dict())
@@ -101,11 +101,11 @@ def update_target_network():
 def trade_t(num_of_stocks, port_value, current_price):
     return 1 if port_value > current_price else 0
 
-def test_stock(stocks_test, initial_investment, selected_year):
+def test_stock(stocks_test, initial_investment, num_episodes):
     global epsilon
     net_worth_history = [initial_investment]
 
-    for episode in range(50):  # Using a fixed number of episodes for now
+    for episode in range(num_episodes):
         state = get_state(stocks_test, 0)
         total_reward = 0
         num_stocks = 0
@@ -150,8 +150,9 @@ def test_stock(stocks_test, initial_investment, selected_year):
 def plot_net_worth(net_worth, stock_df):
     net_worth_df = pd.DataFrame(net_worth, columns=['value'])
     
+    # Ensure there are enough dates for plotting
     if len(stock_df) > len(net_worth_df):
-        stock_df = stock_df.iloc[:len(net_worth_df)]
+        stock_df = stock_df.iloc[:len(net_worth_df)]  # Align with the length of the net worth history
 
     # Plot the portfolio value over time
     fig = go.Figure()
@@ -161,12 +162,14 @@ def plot_net_worth(net_worth, stock_df):
                       xaxis_title='Date', yaxis_title='Portfolio Value ($)')
     st.plotly_chart(fig, use_container_width=True)
     
-    start_net_worth = net_worth[0]  
-    end_net_worth = net_worth[-1]   
+    # Display the start and end portfolio values
+    start_net_worth = net_worth[0]  # Starting portfolio value
+    end_net_worth = net_worth[-1]   # Final portfolio value
     
     st.write(f"Start Portfolio Value: {start_net_worth:.2f}")
     st.write(f"End Portfolio Value: {end_net_worth:.2f}")
     
+    # Display a note based on net worth increase or decrease
     if end_net_worth > start_net_worth:
         st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> '
                     'Increase in your net worth as a result of model decisions.</p>', unsafe_allow_html=True)
@@ -181,7 +184,7 @@ def calculate_performance_metrics(net_worth, initial_investment):
     annualized_return = (net_worth[-1] / initial_investment) ** (365 / len(net_worth)) - 1
     daily_returns = np.diff(net_worth) / net_worth[:-1]
     volatility = np.std(daily_returns)
-    sharpe_ratio = annualized_return / volatility if volatility > 0 else 0  # Handle division by zero
+    sharpe_ratio = annualized_return / volatility
 
     return {
         "Total Return": returns,
@@ -194,7 +197,7 @@ def calculate_performance_metrics(net_worth, initial_investment):
 def display_performance_metrics(metrics):
     st.write("### Performance Metrics")
     for key, value in metrics.items():
-        st.write(f"{key}: {value:.2f}")
+        st.write(f"{key}:{value:.2f}")
 
 def main():
     st.title("Enhancing Stock Trading Strategy Using Reinforcement Learning")
@@ -216,6 +219,7 @@ def home_page():
     names = list(data['Name'].unique())
     names.insert(0, "<Select Names>")
     
+    # Determine the trend for each company
     trends = []
     for name in names[1:]:
         df = data_prep(data, name)
@@ -231,36 +235,43 @@ def home_page():
 def data_exploration():
     data = pd.read_csv('all_stocks_5yr.csv')
     names = list(data['Name'].unique())
-    names.insert(0, "<Select Names>")
-    
-    stock = st.sidebar.selectbox("Choose Company Stocks", names, index=0)
-    if stock != "<Select Names>":
-        stock_df = data_prep(data, stock)
-        show_stock_trend(stock, stock_df)
+    selected_name = st.selectbox("Select Company Name", names)
 
-def show_stock_trend(stock, stock_df):
-    st.write(f"### Stock Trend for {stock}")
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Close Price', line=dict(color='cyan')))
-    fig.update_layout(title=f"{stock} Stock Price Trend", xaxis_title='Date', yaxis_title='Price ($)')
-    st.plotly_chart(fig, use_container_width=True)
+    if selected_name:
+        df = data_prep(data, selected_name)
+        st.write(df)
+
+        # Plot closing price
+        st.write("### Closing Price")
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=df['date'], y=df['close'], mode='lines', name='Close Price'))
+        st.plotly_chart(fig)
 
 def strategy_simulation():
     data = pd.read_csv('all_stocks_5yr.csv')
     names = list(data['Name'].unique())
-    names.insert(0, "<Select Names>")
-    
-    stock = st.sidebar.selectbox("Choose Company Stocks", names, index=0)
-    selected_year = st.sidebar.selectbox("Select Year", range(2018, 2024))  # Year selection from 2018 to 2023
-    
-    initial_investment = st.sidebar.number_input("Enter Initial Investment ($)", value=1000)
-    
-    if stock != "<Select Names>":
-        stock_df = data_prep(data, stock)
-        net_worth = test_stock(stock_df, initial_investment, selected_year)
-        plot_net_worth(net_worth, stock_df)
-        metrics = calculate_performance_metrics(net_worth, initial_investment)
-        display_performance_metrics(metrics)
+    selected_name = st.selectbox("Select Company Name", names)
+
+    if selected_name:
+        df = data_prep(data, selected_name)
+        
+        # Get unique years from the dataset for dynamic selection
+        df['date'] = pd.to_datetime(df['date'])
+        years = df['date'].dt.year.unique().tolist()
+        years.sort()
+
+        # Year selection based on dataset
+        selected_year = st.selectbox("Select Year", years)
+
+        # Filter data based on selected year
+        df_selected_year = df[df['date'].dt.year == selected_year]
+
+        initial_investment = st.number_input("Enter your initial investment ($)", value=1000, step=100)
+        if st.button("Start Simulation"):
+            net_worth_history = test_stock(df_selected_year, initial_investment, num_episodes=100)
+            plot_net_worth(net_worth_history, df_selected_year)
+            metrics = calculate_performance_metrics(net_worth_history, initial_investment)
+            display_performance_metrics(metrics)
 
 if __name__ == "__main__":
     main()

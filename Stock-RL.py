@@ -243,14 +243,18 @@ def home_page():
     # Create two columns for layout
     col1, col2 = st.columns([2, 1])  # Adjust column widths as needed
 
-    # Column 1: Display the original table
+    # Column 1: Display the original insights table
     with col1:
         st.write("### Company Trends")
         st.write(insights_df)
 
-    # Column 2: Graph for the top 5 upward companies
+    # Column 2: Display the top 5 upward companies in a separate table
     with col2:
         if not top_upward_companies.empty:
+            st.write("### Top 5 Upward Companies")
+            st.write(top_upward_companies)
+
+            # Create a bar graph for the top 5 upward companies
             fig = go.Figure()
             fig.add_trace(go.Bar(
                 x=top_upward_companies['Company'],

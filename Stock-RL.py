@@ -9,8 +9,8 @@ import random
 from collections import deque
 
 class DQN(nn.Module):
-    def _init(self, input_dim, output_dim):  # Change _init to _init_
-        super(DQN, self)._init()  # Change _init to _init_()
+    def __init__(self, input_dim, output_dim):  # Change _init to __init__
+        super(DQN, self).__init__()  # Change _init to __init__()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, output_dim)
@@ -20,8 +20,6 @@ class DQN(nn.Module):
         x = torch.relu(self.fc2(x))
         x = self.fc3(x)
         return x
-
-
 
 # Initialize DQN
 input_dim = 3  # Number of state features
@@ -221,130 +219,44 @@ def home_page():
     names = list(data['Name'].unique())
     names.insert(0, "<Select Names>")
     
-    # Prepare to gather insights
-    insights = []
-    
-    for name in names[1:]:
-        df = data_prep(data, name)
-        avg_closing_price = df['close'].mean()  # Average closing price
-        initial_closing_price = df['close'].iloc[0]
-        performance_trend = "Upward" if avg_closing_price > initial_closing_price else "Downward"
+    # Company Selection
+    selected_name = st.selectbox("Select a Company", names)
 
-        insights.append({
-            "Company": name,
-            "Performance Trend": performance_trend,
-            "Average Closing Price": avg_closing_price,
-        })
-
-    # Create a DataFrame and sort it with upward companies first
-    insights_df = pd.DataFrame(insights)
-    insights_df['Upward Indicator'] = insights_df['Performance Trend'].apply(lambda x: 1 if x == "Upward" else 0)
-    insights_df = insights_df.sort_values(by=['Upward Indicator', 'Average Closing Price'], ascending=[False, False]).drop(columns=['Upward Indicator'])
-
-    # Create a bar graph for the top 5 upward companies
-    top_upward_companies = insights_df[insights_df['Performance Trend'] == "Upward"].head(5)
-
-    # Create two columns for layout
-    col1, col2 = st.columns([2, 1])  # Adjust column widths as needed
-
-    # Column 1: Display the insights table
-    with col1:
-        st.write("### Company Trends")
-        st.write(insights_df)
-
-    # Column 2: Display the bar graph for the top 5 upward companies
-    with col2:
-        if not top_upward_companies.empty:
-            fig = go.Figure()
-            fig.add_trace(go.Bar(
-                x=top_upward_companies['Company'],
-                y=top_upward_companies['Average Closing Price'],
-                marker_color='royalblue'  # Professional color
-            ))
-
-            fig.update_layout(
-                title="Avg Closing Prices of Top 5 Upward Companies",
-                xaxis_title="Company",
-                yaxis_title="Average Closing Price ($)",
-                plot_bgcolor='rgba(0, 0, 0, 0)',
-                title_font=dict(size=16, color='darkslategray'),  # Professional color for title
-                xaxis=dict(tickangle=-45, title_font=dict(size=14), tickfont=dict(size=12)),
-                yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
-                margin=dict(l=20, r=20, t=40, b=40)
-            )
-
-            st.plotly_chart(fig, use_container_width=True)
-
-    # Optional: Style for headings
-    st.markdown("<style>h1 {color: darkslategray;} h2 {color: darkslategray;}</style>", unsafe_allow_html=True)
-
-
+    if selected_name != "<Select Names>":
+        df = data_prep(data, selected_name)
+        st.write(df)
 
 def data_exploration():
     data = pd.read_csv('all_stocks_5yr.csv')
     names = list(data['Name'].unique())
-    names.insert(0, "<Select Names>")
-    
-    stock = st.sidebar.selectbox("Choose Company Stocks", names, index=0)
-    if stock != "<Select Names>":
-        stock_df = data_prep(data, stock)
-        
-        # Check if stock_df is not empty
-        if stock_df.empty:
-            st.warning(f"No data available for {stock}. Please select a different stock.")
-            return
-        
-        show_stock_trend(stock, stock_df)
+    selected_name = st.selectbox("Select Company", names)
 
-def show_stock_trend(stock, stock_df):
-    st.write(f"### {stock} Stock Trends")
-    
-    # Check if 'date' and 'close' columns exist
-    if 'date' in stock_df.columns and 'close' in stock_df.columns:
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Close Price', line=dict(color='cyan')))
-        fig.update_layout(title=f"{stock} Stock Closing Price", xaxis_title="Date", yaxis_title="Price ($)")
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # Trend note logic
-        if stock_df['close'].iloc[-1] > stock_df['close'].iloc[0]:
-            trend_note = 'Stock is on a solid upward trend. Investing here might be profitable.'
-        elif stock_df['close'].iloc[-1] < stock_df['close'].iloc[0]:  # Added this condition
-            trend_note = 'Stock has been trending downwards. Caution is advised.'
-        else:
-            trend_note = 'Stock price has remained stable.'
-
-        st.markdown(f"Trend Note: {trend_note}")
-    else:
-        st.error(f"Data for {stock} is missing required columns.")
-
-        
+    if selected_name:
+        df = data_prep(data, selected_name)
+        st.write(df)
+        fig = go.Figure(data=[go.Candlestick(x=df['date'],
+            open=df['open'],
+            high=df['high'],
+            low=df['low'],
+            close=df['close'])])
+        fig.update_layout(title=f'{selected_name} Stock Price History')
+        st.plotly_chart(fig)
 
 def strategy_simulation():
     data = pd.read_csv('all_stocks_5yr.csv')
     names = list(data['Name'].unique())
-    selected_name = st.selectbox("Select Company Name", names)
+    selected_name = st.selectbox("Select Company for Simulation", names)
 
     if selected_name:
         df = data_prep(data, selected_name)
-        
-        # Get unique years from the dataset for dynamic selection
-        df['date'] = pd.to_datetime(df['date'])
-        years = df['date'].dt.year.unique().tolist()
-        years.sort()
+        initial_investment = st.number_input("Enter initial investment amount ($)", value=1000, min_value=100)
+        num_episodes = st.number_input("Enter number of episodes for simulation", value=100, min_value=1)
 
-        # Year selection based on dataset
-        selected_year = st.selectbox("Select Year", years)
+        if st.button("Run Simulation"):
+            net_worth = test_stock(df, initial_investment, num_episodes)
+            plot_net_worth(net_worth, df)
+            performance_metrics = calculate_performance_metrics(net_worth, initial_investment)
+            display_performance_metrics(performance_metrics)
 
-        # Filter data based on selected year
-        df_selected_year = df[df['date'].dt.year == selected_year]
-
-        initial_investment = st.number_input("Enter your initial investment ($)", value=1000, step=100)
-        if st.button("Start Simulation"):
-            net_worth_history = test_stock(df_selected_year, initial_investment, num_episodes=100)
-            plot_net_worth(net_worth_history, df_selected_year)
-            metrics = calculate_performance_metrics(net_worth_history, initial_investment)
-            display_performance_metrics(metrics)
-
-if _name_ == "_main":  # Change _name and main to _name_ and _main_
+if __name__ == "__main__":  # Corrected if statement
     main()

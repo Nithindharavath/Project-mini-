@@ -117,14 +117,19 @@ def test_stock(stocks_test, initial_investment, num_episodes):
             reward = 0
 
             close_price = stocks_test['close'].iloc[t]
+            next_close_price = stocks_test['close'].iloc[t + 1]
+
             if action == 0:  # Buy
                 num_stocks += 1
                 net_worth -= close_price
-                reward = -close_price
+                reward = -close_price  # Penalty for buying
             elif action == 1:  # Sell
-                num_stocks -= 1
-                net_worth += close_price
-                reward = close_price
+                if num_stocks > 0:
+                    num_stocks -= 1
+                    net_worth += close_price
+                    reward = close_price - next_close_price  # Reward based on selling price vs next price
+                else:
+                    reward = 0  # No stocks to sell, no reward
 
             if num_stocks < 0:
                 num_stocks = 0
@@ -145,7 +150,6 @@ def test_stock(stocks_test, initial_investment, num_episodes):
         net_worth_history.append(net_worth)
 
     return net_worth_history
-
 # Function to plot net worth with a dynamic note
 def plot_net_worth(net_worth, stock_df):
     # Filter stock_df to ensure it's within the correct date range
@@ -261,19 +265,29 @@ def show_stock_trend(stock, stock_df):
 
 
 def strategy_simulation():
-    data = pd.read_csv('all_stocks_5yr.csv')  # Load your dataset
-    stock_name = st.selectbox("Select Stock", data['Name'].unique())
-    initial_investment = st.number_input("Initial Investment", min_value=0.0, value=1000.0, step=100.0)
+    data = pd.read_csv('all_stocks_5yr.csv')
+    data['date'] = pd.to_datetime(data['date'])  # Ensure 'date' is in datetime format
 
-    if st.button("Start Simulation"):
-        stock_data = data_prep(data, stock_name)
-        net_worth = test_stock(stock_data, initial_investment, num_episodes=10)
+    # Let the user select the stock and year
+    stock = st.sidebar.selectbox("Choose Company Stocks", data['Name'].unique())
+    selected_year = st.sidebar.selectbox("Select Year", options=list(range(2013, 2019)))  # 2013-2018
 
-        # Plot net worth and display metrics
-        plot_net_worth(net_worth, stock_data)
-        metrics = calculate_performance_metrics(net_worth, initial_investment)
+    # Prepare the data for the selected stock and year
+    stock_df = data_prep(data, stock)
+    stock_df = stock_df[stock_df['date'].dt.year == selected_year]  # Filter data for the selected year
+
+    invest = st.sidebar.number_input("Enter Your Investment Amount", min_value=1, value=1000)
+    
+    if st.sidebar.button("Start Simulation", key=2):
+        num_episodes = 50  # Number of episodes for training
+        net_worth_history = test_stock(stock_df, invest, num_episodes)
+        
+        # Calculate the performance metrics with the adjusted rewards
+        metrics = calculate_performance_metrics(net_worth_history, invest)
         display_performance_metrics(metrics)
-
+        
+        # Plot the portfolio value over the selected year
+        plot_net_worth(net_worth_history, stock_df)
 
 if _name_ == '_main_':
     main()

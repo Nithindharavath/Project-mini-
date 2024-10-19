@@ -10,8 +10,8 @@ from collections import deque
 
 # Define DQN Model
 class DQN(nn.Module):
-    def __init__(self, input_dim, output_dim):  # Corrected __init__ method
-        super(DQN, self).__init__()
+    def _init(self, input_dim, output_dim):  # Corrected __init_ method
+        super(DQN, self)._init_()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, output_dim)
@@ -101,34 +101,50 @@ def update_target_network():
 def trade_t(num_of_stocks, port_value, current_price):
     return 1 if port_value > current_price else 0
 
-def test_stock(stock_df, initial_investment, num_episodes):
-    net_worth_history = []
+def test_stock(stocks_test, initial_investment, num_episodes):
+    global epsilon
+    net_worth_history = [initial_investment]
 
-    # Assume `stock_df` is sorted by date
     for episode in range(num_episodes):
-        current_investment = initial_investment
-        previous_price = stock_df['close'].iloc[0]  # Initial price
+        state = get_state(stocks_test, 0)
+        total_reward = 0
+        num_stocks = 0
+        net_worth = initial_investment
 
-        for t in range(len(stock_df)):
-            current_price = stock_df['close'].iloc[t]
-            
-            # Implement your trading strategy here
-            # Example of buying/selling logic (this should be based on your model)
-            if t > 0:  # Avoid first iteration where there's no previous price
-                if current_price < previous_price:  # If current price is less than previous price
-                    reward = -1  # Negative reward for downward movement
-                else:
-                    reward = 1  # Positive reward for upward movement
+        for t in range(len(stocks_test) - 1):
+            action = next_act(state, epsilon, output_dim)
+            next_state = get_state(stocks_test, t + 1)
+            reward = 0
 
-                # Update current investment based on the action taken
-                current_investment += reward  # Modify this based on your logic
+            close_price = stocks_test['close'].iloc[t]
+            if action == 0:  # Buy
+                num_stocks += 1
+                net_worth -= close_price
+                reward = -close_price
+            elif action == 1:  # Sell
+                num_stocks -= 1
+                net_worth += close_price
+                reward = close_price
 
-            previous_price = current_price  # Update previous price for the next iteration
+            if num_stocks < 0:
+                num_stocks = 0
 
-        net_worth_history.append(current_investment)
+            done = t == len(stocks_test) - 2
+            total_reward += reward
+            remember(state, action, reward, next_state, done)
+            state = next_state
+
+            if done:
+                break
+
+        epsilon = max(epsilon_end, epsilon_decay * epsilon)
+        replay()
+        if episode % update_target_every == 0:
+            update_target_network()
+
+        net_worth_history.append(net_worth)
 
     return net_worth_history
-
 
 # Function to plot net worth with a dynamic note
 def plot_net_worth(net_worth, stock_df):
@@ -162,6 +178,8 @@ def plot_net_worth(net_worth, stock_df):
         st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> '
                     'Decrease in your net worth as a result of model decisions.</p>', unsafe_allow_html=True)
 
+
+
 # Function to calculate performance metrics
 def calculate_performance_metrics(net_worth, initial_investment):
     net_worth = np.array(net_worth)
@@ -182,7 +200,7 @@ def calculate_performance_metrics(net_worth, initial_investment):
 def display_performance_metrics(metrics):
     st.write("### Performance Metrics")
     for key, value in metrics.items():
-        st.write(f"{key}: {value:.2f}")
+        st.write(f"{key}:{value:.2f}")
 
 def main():
     st.title("Enhancing Stock Trading Strategy Using Reinforcement Learning")
@@ -202,27 +220,47 @@ def main():
 def home_page():
     data = pd.read_csv('all_stocks_5yr.csv')
     names = list(data['Name'].unique())
+    names.insert(0, "<Select Names>")
     
-    # Initialize a list to store company trends
-    trends = []
-
     # Determine the trend for each company
-    for name in names:
+    trends = []
+    for name in names[1:]:
         df = data_prep(data, name)
-        trend = "Upward Trend" if df['close'].iloc[-1] >= df['close'].iloc[0] else "Downward Trend"
-        trends.append({"Company": name, "Trend": trend})  # Append dictionary with company and trend
+        final_price = df['close'].iloc[-1]
+        initial_price = df['close'].iloc[0]
+        trend = "Upward" if final_price > initial_price else "Downward"
+        trends.append({"Company": name, "Trend": trend})
 
-    # Convert the trends list to a DataFrame
     trends_df = pd.DataFrame(trends)
-
     st.write("### Company Trends")
-    st.table(trends_df)  # Display the trends DataFrame in tabular format
+    st.write(trends_df)
+
+def data_exploration():
+    data = pd.read_csv('all_stocks_5yr.csv')
+    names = list(data['Name'].unique())
+    names.insert(0, "<Select Names>")
+    
+    stock = st.sidebar.selectbox("Choose Company Stocks", names, index=0)
+    if stock != "<Select Names>":
+        stock_df = data_prep(data, stock)
+        show_stock_trend(stock, stock_df)
+
+def show_stock_trend(stock, stock_df):
+    st.write(f"### {stock} Stock Trends")
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Close Price', line=dict(color='cyan')))  # Changed line color to cyan
+    fig.update_layout(title=f"{stock} Stock Closing Price", xaxis_title="Date", yaxis_title="Price ($)")
+    st.plotly_chart(fig, use_container_width=True)
+    
+    if stock_df['close'].iloc[-1] > stock_df['close'].iloc[0]:
+        trend_note = 'Stock is on a solid upward trend. Investing here might be profitable.'
+    else:
+        trend_note = 'Stock has been trending downwards. Caution is advised.'
+    
+    st.markdown(f"*Trend Note*: {trend_note}")
 
 
 def strategy_simulation():
-    st.write("### Strategy Simulation")
-    
-    # Load the stock data
     data = pd.read_csv('all_stocks_5yr.csv')
     data['date'] = pd.to_datetime(data['date'])  # Ensure 'date' is in datetime format
 
@@ -247,7 +285,8 @@ def strategy_simulation():
         # Plot the portfolio value over the selected year
         plot_net_worth(net_worth_history, stock_df)
 
-if __name__ == "__main__":
-    main()
 
+
+if _name_ == '_main_':
+    main()
 

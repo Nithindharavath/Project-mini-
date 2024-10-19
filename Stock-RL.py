@@ -187,7 +187,12 @@ def calculate_performance_metrics(net_worth, initial_investment):
     annualized_return = (net_worth[-1] / initial_investment) ** (365 / len(net_worth)) - 1
     daily_returns = np.diff(net_worth) / net_worth[:-1]
     volatility = np.std(daily_returns)
-    sharpe_ratio = annualized_return / volatility
+    
+    # Check if volatility is zero to prevent division by zero in Sharpe ratio calculation
+    if volatility > 0:
+        sharpe_ratio = annualized_return / volatility
+    else:
+        sharpe_ratio = 0  # Assign zero if volatility is zero
 
     return {
         "Total Return": returns,

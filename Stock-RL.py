@@ -248,21 +248,34 @@ def data_exploration():
     stock = st.sidebar.selectbox("Choose Company Stocks", names, index=0)
     if stock != "<Select Names>":
         stock_df = data_prep(data, stock)
+        
+        # Check if stock_df is not empty
+        if stock_df.empty:
+            st.warning(f"No data available for {stock}. Please select a different stock.")
+            return
+        
         show_stock_trend(stock, stock_df)
 
 def show_stock_trend(stock, stock_df):
     st.write(f"### {stock} Stock Trends")
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Close Price', line=dict(color='cyan')))  # Changed line color to cyan
-    fig.update_layout(title=f"{stock} Stock Closing Price", xaxis_title="Date", yaxis_title="Price ($)")
-    st.plotly_chart(fig, use_container_width=True)
     
-    if stock_df['close'].iloc[-1] > stock_df['close'].iloc[0]:
-        trend_note = 'Stock is on a solid upward trend. Investing here might be profitable.'
+    # Check if 'date' and 'close' columns exist
+    if 'date' in stock_df.columns and 'close' in stock_df.columns:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Close Price', line=dict(color='cyan')))
+        fig.update_layout(title=f"{stock} Stock Closing Price", xaxis_title="Date", yaxis_title="Price ($)")
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Trend note logic
+        if stock_df['close'].iloc[-1] > stock_df['close'].iloc[0]:
+            trend_note = 'Stock is on a solid upward trend. Investing here might be profitable.'
+        else:
+            trend_note = 'Stock has been trending downwards. Caution is advised.'
+        
+        st.markdown(f"*Trend Note*: {trend_note}")
     else:
-        trend_note = 'Stock has been trending downwards. Caution is advised.'
-    
-    st.markdown(f"*Trend Note*: {trend_note}")
+        st.error(f"Data for {stock} is missing required columns.")
+
         
 
 def strategy_simulation():

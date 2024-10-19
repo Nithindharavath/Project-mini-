@@ -245,7 +245,16 @@ def data_exploration():
 
 def strategy_simulation():
     st.write("### Strategy Simulation")
-    data = pd.read_csv('all_stocks_5yr.csv')
+    
+    try:
+        data = pd.read_csv('all_stocks_5yr.csv')
+    except FileNotFoundError:
+        st.error("The file 'all_stocks_5yr.csv' was not found. Please check the file path.")
+        return  # Exit the function if the file is not found
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
+        return  # Exit the function for other errors
+
     name = st.selectbox("Select Company", list(data['Name'].unique()))
     
     # Get the unique years from the dataset

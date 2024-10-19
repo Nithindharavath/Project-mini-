@@ -237,46 +237,31 @@ def home_page():
     st.table(trends_df)  # Display the trends DataFrame in tabular format
 
 
-def data_exploration():
-    data = pd.read_csv('all_stocks_5yr.csv')
-    name = st.selectbox("Select Company", list(data['Name'].unique()))
-    df = data_prep(data, name)
-    st.write(df)
-
 def strategy_simulation():
-    st.write("### Strategy Simulation")
-    
-    # Load the stock data
     data = pd.read_csv('all_stocks_5yr.csv')
-    
+    data['date'] = pd.to_datetime(data['date'])  # Ensure 'date' is in datetime format
+
     # Let the user select the stock and year
-    name = st.selectbox("Select Company", list(data['Name'].unique()))
-    selected_year = st.selectbox("Select Year", options=list(range(2013, 2019)))  # Options for years 2013-2018
-    initial_investment = st.number_input("Initial Investment", min_value=1, value=10000)
-    
+    stock = st.sidebar.selectbox("Choose Company Stocks", data['Name'].unique())
+    selected_year = st.sidebar.selectbox("Select Year", options=list(range(2013, 2019)))  # 2013-2018
+
     # Prepare the data for the selected stock and year
-    df = data_prep(data, name)
-    df_year = df[df['date'].dt.year == selected_year]  # Filter data for the selected year
+    stock_df = data_prep(data, stock)
+    stock_df = stock_df[stock_df['date'].dt.year == selected_year]  # Filter data for the selected year
 
-    # Check if there is data for the selected year
-    if df_year.empty:
-        st.warning("No data available for the selected year.")
-        return
-
-    # Calculate the number of episodes for the specific year
-    total_days = len(df_year)
-    episodes_per_year = total_days // 252  # Assuming approximately 252 trading days in a year
-    num_episodes = episodes_per_year  # Set to 1 episode for the selected year
+    invest = st.sidebar.number_input("Enter Your Investment Amount", min_value=1, value=1000)
     
-    if st.button("Run Simulation"):
-        net_worth_history = test_stock(df_year, initial_investment, num_episodes)
+    if st.sidebar.button("Start Simulation", key=2):
+        num_episodes = 50  # Number of episodes for training
+        net_worth_history = test_stock(stock_df, invest, num_episodes)
+        
+        # Display the performance metrics
+        metrics = calculate_performance_metrics(net_worth_history, invest)
+        display_performance_metrics(metrics)
         
         # Plot the portfolio value over the selected year
-        plot_net_worth(net_worth_history, df_year)
-        
-        # Display performance metrics
-        metrics = calculate_performance_metrics(net_worth_history, initial_investment)
-        display_performance_metrics(metrics)
+        plot_net_worth(net_worth_history, stock_df)
+
 
 
 

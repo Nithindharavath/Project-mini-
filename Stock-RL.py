@@ -295,7 +295,6 @@ def data_exploration():
             return
         
         show_stock_trend(stock, stock_df)
-
 def show_stock_trend(stock, stock_df):
     st.write(f"### {stock} Stock Trends")
     

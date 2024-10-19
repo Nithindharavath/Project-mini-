@@ -126,30 +126,28 @@ def test_stock(stocks_test, initial_investment, num_episodes):
                 if num_stocks > 0:  # Only sell if we own stocks
                     num_stocks -= 1
                     net_worth += close_price
-                    # Calculate profit/loss
-                    reward = close_price - stocks_test['close'].iloc[t-1] if t > 0 else 0
-                    if reward < 0:  # If selling at a loss
-                        reward = reward  # Keep the loss
+                    # Calculate profit/loss considering the previous close price
+                    reward = close_price - stocks_test['close'].iloc[t-1]
 
             if num_stocks < 0:
                 num_stocks = 0
 
-            done = t == len(stocks_test) - 2
+            # Adjust net worth based on current holdings
+            current_value = net_worth + (num_stocks * stocks_test['close'].iloc[t])
             total_reward += reward
             remember(state, action, reward, next_state, done)
-            state = next_state
 
-            if done:
-                break
+            # Update the net worth for the history
+            net_worth_history.append(current_value)
+            state = next_state
 
         epsilon = max(epsilon_end, epsilon_decay * epsilon)
         replay()
         if episode % update_target_every == 0:
             update_target_network()
 
-        net_worth_history.append(net_worth)
-
     return net_worth_history
+
 
 def plot_net_worth(net_worth, stock_df):
     net_worth_df = pd.DataFrame(net_worth, columns=['value'])

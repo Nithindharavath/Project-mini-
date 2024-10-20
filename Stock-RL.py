@@ -9,8 +9,8 @@ import random
 from collections import deque
 
 class DQN(nn.Module):
-    def __init__(self, input_dim, output_dim):  # Corrected constructor
-        super(DQN, self).__init__()
+    def __init__(self, input_dim, output_dim):  # Change _init to __init__
+        super(DQN, self).__init__()  # Change _init to __init__()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, output_dim)
@@ -20,6 +20,7 @@ class DQN(nn.Module):
         x = torch.relu(self.fc2(x))
         x = self.fc3(x)
         return x
+
 
 
 # Initialize DQN
@@ -125,27 +126,59 @@ def test_stock(stocks_test, initial_investment, num_episodes):
                 if num_stocks > 0:  # Only sell if we own stocks
                     num_stocks -= 1
                     net_worth += close_price
-                    reward = close_price  # Reward for selling
+                    # Calculate profit/loss considering the previous close price
+                    reward = close_price - stocks_test['close'].iloc[t-1]
 
             if num_stocks < 0:
                 num_stocks = 0
 
-            done = t == len(stocks_test) - 2
+            # Adjust net worth based on current holdings
+            current_value = net_worth + (num_stocks * stocks_test['close'].iloc[t])
             total_reward += reward
             remember(state, action, reward, next_state, done)
-            state = next_state
 
-            if done:
-                break
+            # Update the net worth for the history
+            net_worth_history.append(current_value)
+            state = next_state
 
         epsilon = max(epsilon_end, epsilon_decay * epsilon)
         replay()
         if episode % update_target_every == 0:
             update_target_network()
 
-        net_worth_history.append(net_worth)
-
     return net_worth_history
+
+
+def plot_net_worth(net_worth, stock_df):
+    net_worth_df = pd.DataFrame(net_worth, columns=['value'])
+    
+    # Ensure there are enough dates for plotting
+    if len(stock_df) > len(net_worth_df):
+        stock_df = stock_df.iloc[:len(net_worth_df)]  # Align with the length of the net worth history
+
+    # Plot the portfolio value over time
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=stock_df['date'], y=net_worth_df['value'], mode='lines', 
+                             name='Portfolio Value', line=dict(color='cyan', width=2)))
+    fig.update_layout(title='Change in Portfolio Value Day by Day', 
+                      xaxis_title='Date', yaxis_title='Portfolio Value ($)')
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Display the start and end portfolio values
+    start_net_worth = net_worth[0]  # Starting portfolio value
+    end_net_worth = net_worth[-1]   # Final portfolio value
+    
+    st.write(f"Start Portfolio Value: {start_net_worth:.2f}")
+    st.write(f"End Portfolio Value: {end_net_worth:.2f}")
+    
+    # Display a note based on net worth increase or decrease
+    if end_net_worth > start_net_worth:
+        st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> '
+                    'Increase in your net worth as a result of model decisions.</p>', unsafe_allow_html=True)
+    else:
+        st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> '
+                    'Decrease in your net worth as a result of model decisions.</p>', unsafe_allow_html=True)
+
 
 # Function to plot net worth with a dynamic note
 def plot_net_worth(net_worth, stock_df):
@@ -220,18 +253,64 @@ def home_page():
     names = list(data['Name'].unique())
     names.insert(0, "<Select Names>")
     
-    # Determine the trend for each company
-    trends = []
+    # Prepare to gather insights
+    insights = []
+    
     for name in names[1:]:
         df = data_prep(data, name)
-        final_price = df['close'].iloc[-1]
-        initial_price = df['close'].iloc[0]
-        trend = "Upward" if final_price > initial_price else "Downward"
-        trends.append({"Company": name, "Trend": trend})
+        avg_closing_price = df['close'].mean()  # Average closing price
+        initial_closing_price = df['close'].iloc[0]
+        performance_trend = "Upward" if avg_closing_price > initial_closing_price else "Downward"
 
-    trends_df = pd.DataFrame(trends)
-    st.write("### Company Trends")
-    st.write(trends_df)
+        insights.append({
+            "Company": name,
+            "Performance Trend": performance_trend,
+            "Average Closing Price": avg_closing_price,
+        })
+
+    # Create a DataFrame and sort it with upward companies first
+    insights_df = pd.DataFrame(insights)
+    insights_df['Upward Indicator'] = insights_df['Performance Trend'].apply(lambda x: 1 if x == "Upward" else 0)
+    insights_df = insights_df.sort_values(by=['Upward Indicator', 'Average Closing Price'], ascending=[False, False]).drop(columns=['Upward Indicator'])
+
+    # Create a bar graph for the top 5 upward companies
+    top_upward_companies = insights_df[insights_df['Performance Trend'] == "Upward"].head(5)
+
+    # Create two columns for layout
+    col1, col2 = st.columns([2, 1])  # Adjust column widths as needed
+
+    # Column 1: Display the insights table
+    with col1:
+        st.write("### Company Trends")
+        st.write(insights_df)
+
+    # Column 2: Display the bar graph for the top 5 upward companies
+    with col2:
+        if not top_upward_companies.empty:
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=top_upward_companies['Company'],
+                y=top_upward_companies['Average Closing Price'],
+                marker_color='royalblue'  # Professional color
+            ))
+
+            fig.update_layout(
+                title="Avg Closing Prices of Top 5 Upward Companies",
+                xaxis_title="Company",
+                yaxis_title="Average Closing Price ($)",
+                plot_bgcolor='rgba(0, 0, 0, 0)',
+                title_font=dict(size=16, color='darkslategray'),  # Professional color for title
+                xaxis=dict(tickangle=-45, title_font=dict(size=14), tickfont=dict(size=12)),
+                yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
+                margin=dict(l=20, r=20, t=40, b=40)
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+    # Optional: Style for headings
+    st.markdown("<style>h1 {color: darkslategray;} h2 {color: darkslategray;}</style>", unsafe_allow_html=True)
+
+
 
 def data_exploration():
     data = pd.read_csv('all_stocks_5yr.csv')
@@ -248,7 +327,6 @@ def data_exploration():
             return
         
         show_stock_trend(stock, stock_df)
-
 def show_stock_trend(stock, stock_df):
     st.write(f"### {stock} Stock Trends")
     
@@ -262,12 +340,16 @@ def show_stock_trend(stock, stock_df):
         # Trend note logic
         if stock_df['close'].iloc[-1] > stock_df['close'].iloc[0]:
             trend_note = 'Stock is on a solid upward trend. Investing here might be profitable.'
-        else:
+        elif stock_df['close'].iloc[-1] < stock_df['close'].iloc[0]:  # Added this condition
             trend_note = 'Stock has been trending downwards. Caution is advised.'
-        
+        else:
+            trend_note = 'Stock price has remained stable.'
+
         st.markdown(f"Trend Note: {trend_note}")
     else:
         st.error(f"Data for {stock} is missing required columns.")
+
+        
 
 def strategy_simulation():
     data = pd.read_csv('all_stocks_5yr.csv')
@@ -295,5 +377,5 @@ def strategy_simulation():
             metrics = calculate_performance_metrics(net_worth_history, initial_investment)
             display_performance_metrics(metrics)
 
-if __name__ == "__main__":  # Corrected main guard
+if __name__ == "__main__":  # Change _name_ and _main_ to __name__ and __main__
     main()

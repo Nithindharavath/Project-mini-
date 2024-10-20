@@ -324,7 +324,7 @@ def home_page():
 
     # Optional: Style for headings
     st.markdown("<style>h1 {color: darkslategray;} h2 {color: darkslategray;}</style>", unsafe_allow_html=True)
-ue)
+    value)
 
 
 

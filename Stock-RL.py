@@ -8,10 +8,9 @@ import torch.optim as optim
 import random
 from collections import deque
 
-# Define the DQN network class
 class DQN(nn.Module):
-    def __init__(self, input_dim, output_dim):
-        super(DQN, self).__init__()
+    def _init_(self, input_dim, output_dim):
+        super(DQN, self)._init_()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, output_dim)
@@ -21,16 +20,6 @@ class DQN(nn.Module):
         x = torch.relu(self.fc2(x))
         x = self.fc3(x)
         return x
-
-# Initialize DQN - make sure input_dim and output_dim are correct
-input_dim = 3  # Number of input features (adjust based on your actual input data)
-output_dim = 3  # Number of actions (e.g., Buy, Sell, Hold)
-dqn = DQN(int(input_dim), int(output_dim))
-target_dqn = DQN(int(input_dim), int(output_dim))
-target_dqn.load_state_dict(dqn.state_dict())
-optimizer = torch.optim.Adam(dqn.parameters())
-loss_fn = torch.nn.MSELoss()
-
 
 
 # Initialize DQN
@@ -226,23 +215,23 @@ def main():
     elif selected_tab == "Strategy Simulation":
         strategy_simulation()
 
-def home_tab():
-    # Load your stock data
+def home_page():
     data = pd.read_csv('all_stocks_5yr.csv')
-    top_upward_trends = data[data['close'] > data['open']].sort_values(by='close', ascending=False).head(5)
+    names = list(data['Name'].unique())
+    names.insert(0, "<Select Names>")
+    
+    # Determine the trend for each company
+    trends = []
+    for name in names[1:]:
+        df = data_prep(data, name)
+        final_price = df['close'].iloc[-1]
+        initial_price = df['close'].iloc[0]
+        trend = "Upward" if final_price > initial_price else "Downward"
+        trends.append({"Company": name, "Trend": trend})
 
-    # Display the table
-    st.write("### Top 5 Companies with Highest Upward Stock Trend")
-    st.dataframe(top_upward_trends[['Name', 'date', 'open', 'close']])
-
-    # Create a bar graph for the top 5 highest upward stock companies
-    fig = go.Figure()
-    for index, row in top_upward_trends.iterrows():
-        fig.add_trace(go.Bar(x=[row['Name']], y=[row['close'] - row['open']], name=row['Name']))
-
-    fig.update_layout(title='Top 5 Companies by Upward Trend', xaxis_title='Company', yaxis_title='Price Change ($)', barmode='group')
-    st.plotly_chart(fig, use_container_width=True)
-
+    trends_df = pd.DataFrame(trends)
+    st.write("### Company Trends")
+    st.write(trends_df)
 
 def data_exploration():
     data = pd.read_csv('all_stocks_5yr.csv')
@@ -273,33 +262,40 @@ def show_stock_trend(stock, stock_df):
         # Trend note logic
         if stock_df['close'].iloc[-1] > stock_df['close'].iloc[0]:
             trend_note = 'Stock is on a solid upward trend. Investing here might be profitable.'
-        elif stock_df['close'].iloc[-1] < stock_df['close'].iloc[0]:  # Added this condition
-            trend_note = 'Stock has been trending downwards. Caution is advised.'
         else:
-            trend_note = 'Stock price has remained stable.'
-
+            trend_note = 'Stock has been trending downwards. Caution is advised.'
+        
         st.markdown(f"Trend Note: {trend_note}")
     else:
         st.error(f"Data for {stock} is missing required columns.")
 
         
 
-def strategy_simulation_tab():
-    # Assuming you have a DataFrame `simulation_results` with your simulation data
-    simulation_results = pd.DataFrame({
-        'Company': ['A', 'B', 'C'],
-        'Profit/Loss': [200, -150, 300]  # Example values
-    })
+def strategy_simulation():
+    data = pd.read_csv('all_stocks_5yr.csv')
+    names = list(data['Name'].unique())
+    selected_name = st.selectbox("Select Company Name", names)
 
-    # Display the results
-    st.write("### Strategy Simulation Results")
-    for index, row in simulation_results.iterrows():
-        if row['Profit/Loss'] > 0:
-            st.markdown(f"**{row['Company']}**: :green[Profit of ${row['Profit/Loss']}]")
-        else:
-            st.markdown(f"**{row['Company']}**: :red[Loss of ${-row['Profit/Loss']}]")
+    if selected_name:
+        df = data_prep(data, selected_name)
+        
+        # Get unique years from the dataset for dynamic selection
+        df['date'] = pd.to_datetime(df['date'])
+        years = df['date'].dt.year.unique().tolist()
+        years.sort()
 
+        # Year selection based on dataset
+        selected_year = st.selectbox("Select Year", years)
 
-if __name__ == "__main__":
+        # Filter data based on selected year
+        df_selected_year = df[df['date'].dt.year == selected_year]
 
+        initial_investment = st.number_input("Enter your initial investment ($)", value=1000, step=100)
+        if st.button("Start Simulation"):
+            net_worth_history = test_stock(df_selected_year, initial_investment, num_episodes=100)
+            plot_net_worth(net_worth_history, df_selected_year)
+            metrics = calculate_performance_metrics(net_worth_history, initial_investment)
+            display_performance_metrics(metrics)
+
+if _name_ == "_main_":
     main()

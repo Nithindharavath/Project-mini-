@@ -257,15 +257,14 @@ def main():
     
     elif selected_tab == "Strategy Simulation":
         strategy_simulation()
-
 def home_page():
     data = pd.read_csv('all_stocks_5yr.csv')
     names = list(data['Name'].unique())
     names.insert(0, "<Select Names>")
-    
+
     # Prepare to gather insights
     insights = []
-    
+
     for name in names[1:]:
         df = data_prep(data, name)
         avg_closing_price = df['close'].mean()  # Average closing price
@@ -287,7 +286,7 @@ def home_page():
     top_upward_companies = insights_df[insights_df['Performance Trend'] == "Upward"].head(5)
 
     # Create two columns for layout
-    col1, col2 = st.columns([2, 1])  # Adjust column widths as needed
+    col1, col2 = st.columns([2, 1])
 
     # Column 1: Display the insights table
     with col1:
@@ -301,7 +300,13 @@ def home_page():
             fig.add_trace(go.Bar(
                 x=top_upward_companies['Company'],
                 y=top_upward_companies['Average Closing Price'],
-                marker_color='royalblue'  # Professional color
+                marker=dict(
+                    color=top_upward_companies['Average Closing Price'],
+                    colorscale='Blues',  # Apply a gradient color
+                    showscale=True
+                ),
+                text=top_upward_companies['Average Closing Price'],
+                textposition='outside'  # Add the exact values on top of the bars
             ))
 
             fig.update_layout(
@@ -309,7 +314,7 @@ def home_page():
                 xaxis_title="Company",
                 yaxis_title="Average Closing Price ($)",
                 plot_bgcolor='rgba(0, 0, 0, 0)',
-                title_font=dict(size=16, color='darkslategray'),  # Professional color for title
+                title_font=dict(size=18, color='darkslategray'),
                 xaxis=dict(tickangle=-45, title_font=dict(size=14), tickfont=dict(size=12)),
                 yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
                 margin=dict(l=20, r=20, t=40, b=40)
@@ -319,6 +324,7 @@ def home_page():
 
     # Optional: Style for headings
     st.markdown("<style>h1 {color: darkslategray;} h2 {color: darkslategray;}</style>", unsafe_allow_html=True)
+ue)
 
 
 

@@ -306,11 +306,11 @@ def home_page():
             ))
 
             fig.update_layout(
-                title="Avg Closing Prices of Top 5 Upward Companies",
+                title="Top 5 Upward Companies",
                 xaxis_title="Company",
                 yaxis_title="Average Closing Price ($)",
                 plot_bgcolor='rgba(0, 0, 0, 0)',
-                title_font=dict(size=16, color='darkslategray'),  # Professional color for title
+                title_font=dict(size=20, color='white'),  # Professional color for title
                 xaxis=dict(tickangle=-45, title_font=dict(size=14), tickfont=dict(size=12)),
                 yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
                 margin=dict(l=20, r=20, t=40, b=40)

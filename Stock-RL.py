@@ -215,11 +215,20 @@ def plot_net_worth(net_worth, stock_df):
 # Function to calculate performance metrics
 def calculate_performance_metrics(net_worth, initial_investment):
     net_worth = np.array(net_worth)
+    if len(net_worth) < 2:  # Ensure there are enough data points
+        return {
+            "Total Return": np.nan,
+            "Annualized Return": np.nan,
+            "Volatility": np.nan,
+            "Sharpe Ratio": np.nan
+        }
+    
     returns = (net_worth[-1] - initial_investment) / initial_investment
     annualized_return = (net_worth[-1] / initial_investment) ** (365 / len(net_worth)) - 1
     daily_returns = np.diff(net_worth) / net_worth[:-1]
     volatility = np.std(daily_returns)
-    sharpe_ratio = annualized_return / volatility if volatility != 0 else 0  # Prevent division by zero
+
+    sharpe_ratio = annualized_return / volatility if volatility != 0 else np.nan  # Return NaN if volatility is zero
 
     return {
         "Total Return": returns,
@@ -227,12 +236,6 @@ def calculate_performance_metrics(net_worth, initial_investment):
         "Volatility": volatility,
         "Sharpe Ratio": sharpe_ratio
     }
-
-# Function to display performance metrics
-def display_performance_metrics(metrics):
-    st.write("### Performance Metrics")
-    for key, value in metrics.items():
-        st.write(f"{key}: {value:.2f}")
 
 def main():
     st.title("Enhancing Stock Trading Strategy Using Reinforcement Learning")

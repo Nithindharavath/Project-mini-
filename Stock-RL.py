@@ -8,9 +8,10 @@ import torch.optim as optim
 import random
 from collections import deque
 
+# Define the DQN network class
 class DQN(nn.Module):
-    def _init_(self, input_dim, output_dim):
-        super(DQN, self)._init_()
+    def __init__(self, input_dim, output_dim):
+        super(DQN, self).__init__()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, output_dim)
@@ -20,6 +21,16 @@ class DQN(nn.Module):
         x = torch.relu(self.fc2(x))
         x = self.fc3(x)
         return x
+
+# Initialize DQN - make sure input_dim and output_dim are correct
+input_dim = 3  # Number of input features (adjust based on your actual input data)
+output_dim = 3  # Number of actions (e.g., Buy, Sell, Hold)
+dqn = DQN(int(input_dim), int(output_dim))
+target_dqn = DQN(int(input_dim), int(output_dim))
+target_dqn.load_state_dict(dqn.state_dict())
+optimizer = torch.optim.Adam(dqn.parameters())
+loss_fn = torch.nn.MSELoss()
+
 
 
 # Initialize DQN

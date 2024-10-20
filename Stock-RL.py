@@ -219,7 +219,7 @@ def plot_net_worth(net_worth, stock_df):
         note_color = "red"  # Color for decrease
         note_text = "Decrease in your net worth as a result of model decisions."
     
-    st.markdown(f"<b style='color:{note_color}; font-size: 20px;'>NOTE:</b> <span style='color:blue; font-size: 20px;'>{note_text}</span>", unsafe_allow_html=True)
+    st.markdown(f"<b style='color:{note_color}; font-size: 20px;'>NOTE:</b> <span style='color:cyan; font-size: 20px;'>{note_text}</span>", unsafe_allow_html=True)
 
 
 # Function to calculate performance metrics

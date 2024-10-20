@@ -385,3 +385,4 @@ def strategy_simulation():
             display_performance_metrics(metrics)
 
 if __name__ == "__main__":
+    main()

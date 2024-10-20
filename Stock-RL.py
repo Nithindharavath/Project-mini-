@@ -293,7 +293,7 @@ def home_page():
     # Column 1: Display the insights table
     with col1:
         st.write("### Company Trends")
-        # Filter the insights_df to show only the required columns
+        # Filter the insights_df to show only the required columns, removing the first column
         st.write(insights_df[['Company', 'Performance Trend', 'Average Closing Price']])
 
     # Column 2: Display the bar graph for the top 5 upward companies
@@ -321,6 +321,7 @@ def home_page():
 
     # Optional: Style for headings
     st.markdown("<style>h1 {color: darkslategray;} h2 {color: darkslategray;}</style>", unsafe_allow_html=True)
+
 
     
 def data_exploration():

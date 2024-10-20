@@ -9,17 +9,20 @@ import random
 from collections import deque
 
 class DQN(nn.Module):
-    def __init__(self, input_dim, output_dim):  # Corrected __init__ method
-        super(DQN, self).__init__()  # Correctly calling the parent class constructor
+    def _init(self, input_dim, output_dim):  # Use __init_ instead of _init
+        super(DQN, self)._init_()  # Correctly calling the parent class constructor
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, output_dim)
+
 
     def forward(self, x):
         x = torch.relu(self.fc1(x))
         x = torch.relu(self.fc2(x))
         x = self.fc3(x)
         return x
+
+
 
 # Initialize DQN
 input_dim = 3  # Number of state features
@@ -384,5 +387,5 @@ def strategy_simulation():
             metrics = calculate_performance_metrics(net_worth_history, initial_investment)
             display_performance_metrics(metrics)
 
-if __name__ == "__main__":  # Correctly use double underscores
+if _name_ == "_main":  # Change _name and main to _name and main
     main()

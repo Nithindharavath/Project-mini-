@@ -291,26 +291,38 @@ def home_page():
             fig.add_trace(go.Bar(
                 x=top_upward_companies['Company'],
                 y=top_upward_companies['Average Closing Price'],
-                marker_color='royalblue'  # Professional color
+                marker_color='royalblue',  # Professional color
+                text=top_upward_companies['Average Closing Price'],  # Show values on bars
+                textposition='auto'  # Position the text automatically
             ))
 
             fig.update_layout(
-                title="Avg Closing Prices of Top 5 Upward Companies",
+                title="Average Closing Prices of Top 5 Upward Companies",
                 xaxis_title="Company",
                 yaxis_title="Average Closing Price ($)",
                 plot_bgcolor='rgba(0, 0, 0, 0)',
-                title_font=dict(size=16, color='darkslategray'),  # Professional color for title
+                title_font=dict(size=18, color='darkslategray'),  # Professional color for title
                 xaxis=dict(tickangle=-45, title_font=dict(size=14), tickfont=dict(size=12)),
                 yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
-                margin=dict(l=20, r=20, t=40, b=40)
+                margin=dict(l=20, r=20, t=40, b=40),
+                annotations=[
+                    dict(
+                        x=row['Company'],
+                        y=row['Average Closing Price'],
+                        text=f"${row['Average Closing Price']:.2f}",
+                        showarrow=True,
+                        arrowhead=2,
+                        ax=0,
+                        ay=-40,
+                        font=dict(color='black')
+                    ) for i, row in top_upward_companies.iterrows()
+                ]
             )
 
             st.plotly_chart(fig, use_container_width=True)
 
     # Optional: Style for headings
     st.markdown("<style>h1 {color: darkslategray;} h2 {color: darkslategray;}</style>", unsafe_allow_html=True)
-
-
 
 def data_exploration():
     data = pd.read_csv('all_stocks_5yr.csv')

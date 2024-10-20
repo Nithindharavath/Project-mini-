@@ -290,10 +290,11 @@ def home_page():
     # Create two columns for layout
     col1, col2 = st.columns([2, 1])  # Adjust column widths as needed
 
-    # Column 1: Display the insights table
+    # Column 1: Display the insights table without the first column
     with col1:
         st.write("### Company Trends")
-        st.write(insights_df)
+        # Display the insights_df, removing the first column
+        st.write(insights_df[['Performance Trend', 'Average Closing Price']])  # Removed the "Company" column
 
     # Column 2: Display the bar graph for the top 5 upward companies
     with col2:
@@ -320,8 +321,6 @@ def home_page():
 
     # Optional: Style for headings
     st.markdown("<style>h1 {color: darkslategray;} h2 {color: darkslategray;}</style>", unsafe_allow_html=True)
-
-
 
 def data_exploration():
     data = pd.read_csv('all_stocks_5yr.csv')

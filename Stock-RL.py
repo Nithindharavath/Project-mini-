@@ -290,20 +290,21 @@ def home_page():
     # Create two columns for layout
     col1, col2 = st.columns([2, 1])  # Adjust column widths as needed
 
-    # Column 1: Display the insights table
-    with col1:
-        st.write("### Company Trends")
-        st.write(insights_df)
+# Column 1: Display the insights table
+with col1:
+    st.write("### Company Trends")
+    # Filter the insights_df to show only the required columns
+    st.write(insights_df[['Company', 'Performance Trend', 'Average Closing Price']])
 
-    # Column 2: Display the bar graph for the top 5 upward companies
-    with col2:
-        if not top_upward_companies.empty:
-            fig = go.Figure()
-            fig.add_trace(go.Bar(
-                x=top_upward_companies['Company'],
-                y=top_upward_companies['Average Closing Price'],
-                marker_color='royalblue'  # Professional color
-            ))
+# Column 2: Display the bar graph for the top 5 upward companies
+with col2:
+    if not top_upward_companies.empty:
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            x=top_upward_companies['Company'],
+            y=top_upward_companies['Average Closing Price'],
+            marker_color='royalblue'  # Professional color
+        ))
 
             fig.update_layout(
                 title="Top 5 Upward Companies",

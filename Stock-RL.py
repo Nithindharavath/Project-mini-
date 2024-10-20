@@ -9,8 +9,8 @@ import random
 from collections import deque
 
 class DQN(nn.Module):
-    def _init(self, input_dim, output_dim):  # Use __init_ instead of _init
-        super(DQN, self)._init_()  # Correctly calling the parent class constructor
+    def __init__(self, input_dim, output_dim):  # Corrected
+        super(DQN, self).__init__()  # Correctly calling the parent class constructor
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, output_dim)
@@ -20,6 +20,7 @@ class DQN(nn.Module):
         x = torch.relu(self.fc2(x))
         x = self.fc3(x)
         return x
+
 # Initialize DQN
 input_dim = 3  # Number of state features
 output_dim = 3  # Number of actions: Buy, Sell, Hold

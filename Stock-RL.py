@@ -10,7 +10,7 @@ from collections import deque
 
 class DQN(nn.Module):
     def __init__(self, input_dim, output_dim):  # Change _init to __init__
-        super(DQN, self).__init__()  # Change _init to __init__()
+        super(DQN, self).__init__()  # Change _init to __init__() 
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, output_dim)
@@ -20,7 +20,6 @@ class DQN(nn.Module):
         x = torch.relu(self.fc2(x))
         x = self.fc3(x)
         return x
-
 
 
 # Initialize DQN
@@ -154,7 +153,6 @@ def test_stock(stocks_test, initial_investment, num_episodes):
     return net_worth_history
 
 
-
 def plot_net_worth(net_worth, stock_df):
     net_worth_df = pd.DataFrame(net_worth, columns=['value'])
     
@@ -187,7 +185,6 @@ def plot_net_worth(net_worth, stock_df):
 
 
 # Function to plot net worth with a dynamic note
-# Function to plot net worth with a dynamic note
 def plot_net_worth(net_worth, stock_df):
     net_worth_df = pd.DataFrame(net_worth, columns=['value'])
     
@@ -218,179 +215,23 @@ def plot_net_worth(net_worth, stock_df):
         note_color = "red"  # Color for decrease
         note_text = "Decrease in your net worth as a result of model decisions."
     
-    st.markdown(f"<b style='color:{note_color}; font-size: 20px;'>NOTE:</b> <span style='color:blue; font-size: 20px;'>{note_text}</span>", unsafe_allow_html=True)
+    st.markdown(f"<span style='color:{note_color};'>{note_text}</span>", unsafe_allow_html=True)
 
 
-# Function to calculate performance metrics
-def calculate_performance_metrics(net_worth, initial_investment):
-    net_worth = np.array(net_worth)
-    returns = (net_worth[-1] - initial_investment) / initial_investment
-    annualized_return = (net_worth[-1] / initial_investment) ** (365 / len(net_worth)) - 1
-    daily_returns = np.diff(net_worth) / net_worth[:-1]
-    volatility = np.std(daily_returns)
-    sharpe_ratio = annualized_return / volatility if volatility != 0 else 0  # Prevent division by zero
+# User input for stock ticker, initial investment, and number of episodes
+ticker = st.text_input('Enter stock ticker:', 'AAPL')
+initial_investment = st.number_input('Initial investment:', min_value=100, step=100, value=1000)
+num_episodes = st.number_input('Number of episodes:', min_value=1, step=1, value=50)
 
-    return {
-        "Total Return": returns,
-        "Annualized Return": annualized_return,
-        "Volatility": volatility,
-        "Sharpe Ratio": sharpe_ratio
-    }
+# Simulate stock trading
+# Placeholder for stock data - Replace with actual stock data retrieval
+stocks_data = pd.DataFrame({
+    'date': pd.date_range(start='2020-01-01', periods=200),
+    'close': np.random.randn(200).cumsum() + 100  # Simulated stock prices
+})
 
-# Function to display performance metrics
-def display_performance_metrics(metrics):
-    st.write("### Performance Metrics")
-    for key, value in metrics.items():
-        st.write(f"{key}: {value:.2f}")
+stock_data = data_prep(stocks_data, ticker)
+net_worth_history = test_stock(stock_data, initial_investment, num_episodes)
 
-def main():
-    st.title("Enhancing Stock Trading Strategy Using Reinforcement Learning")
-    
-    tabs = ["Home", "Data Exploration", "Strategy Simulation"]
-    selected_tab = st.sidebar.selectbox("Select a tab", tabs)
-
-    if selected_tab == "Home":
-        home_page()
-    
-    elif selected_tab == "Data Exploration":
-        data_exploration()
-    
-    elif selected_tab == "Strategy Simulation":
-        strategy_simulation()
-def home_page():
-    data = pd.read_csv('all_stocks_5yr.csv')
-    names = list(data['Name'].unique())
-    names.insert(0, "<Select Names>")
-
-    # Prepare to gather insights
-    insights = []
-
-    for name in names[1:]:
-        df = data_prep(data, name)
-        avg_closing_price = df['close'].mean()  # Average closing price
-        initial_closing_price = df['close'].iloc[0]
-        performance_trend = "Upward" if avg_closing_price > initial_closing_price else "Downward"
-
-        insights.append({
-            "Company": name,
-            "Performance Trend": performance_trend,
-            "Average Closing Price": avg_closing_price,
-        })
-
-    # Create a DataFrame and sort it with upward companies first
-    insights_df = pd.DataFrame(insights)
-    insights_df['Upward Indicator'] = insights_df['Performance Trend'].apply(lambda x: 1 if x == "Upward" else 0)
-    insights_df = insights_df.sort_values(by=['Upward Indicator', 'Average Closing Price'], ascending=[False, False]).drop(columns=['Upward Indicator'])
-
-    # Create a bar graph for the top 5 upward companies
-    top_upward_companies = insights_df[insights_df['Performance Trend'] == "Upward"].head(5)
-
-    # Create two columns for layout
-    col1, col2 = st.columns([2, 1])
-
-    # Column 1: Display the insights table
-    with col1:
-        st.write("### Company Trends")
-        st.write(insights_df)
-
-    # Column 2: Display the bar graph for the top 5 upward companies
-    with col2:
-        if not top_upward_companies.empty:
-            fig = go.Figure()
-            fig.add_trace(go.Bar(
-                x=top_upward_companies['Company'],
-                y=top_upward_companies['Average Closing Price'],
-                marker=dict(
-                    color=top_upward_companies['Average Closing Price'],
-                    colorscale='Blues',  # Apply a gradient color
-                    showscale=True
-                ),
-                text=top_upward_companies['Average Closing Price'],
-                textposition='outside'  # Add the exact values on top of the bars
-            ))
-
-            fig.update_layout(
-                title="Avg Closing Prices of Top 5 Upward Companies",
-                xaxis_title="Company",
-                yaxis_title="Average Closing Price ($)",
-                plot_bgcolor='rgba(0, 0, 0, 0)',
-                title_font=dict(size=18, color='darkslategray'),
-                xaxis=dict(tickangle=-45, title_font=dict(size=14), tickfont=dict(size=12)),
-                yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
-                margin=dict(l=20, r=20, t=40, b=40)
-            )
-
-            st.plotly_chart(fig, use_container_width=True)
-
-    # Optional: Style for headings
-    st.markdown("<style>h1 {color: darkslategray;} h2 {color: darkslategray;}</style>", unsafe_allow_html=True)
-    value)
-
-
-
-def data_exploration():
-    data = pd.read_csv('all_stocks_5yr.csv')
-    names = list(data['Name'].unique())
-    names.insert(0, "<Select Names>")
-    
-    stock = st.sidebar.selectbox("Choose Company Stocks", names, index=0)
-    if stock != "<Select Names>":
-        stock_df = data_prep(data, stock)
-        
-        # Check if stock_df is not empty
-        if stock_df.empty:
-            st.warning(f"No data available for {stock}. Please select a different stock.")
-            return
-        
-        show_stock_trend(stock, stock_df)
-def show_stock_trend(stock, stock_df):
-    st.write(f"### {stock} Stock Trends")
-    
-    # Check if 'date' and 'close' columns exist
-    if 'date' in stock_df.columns and 'close' in stock_df.columns:
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=stock_df['date'], y=stock_df['close'], mode='lines', name='Close Price', line=dict(color='cyan')))
-        fig.update_layout(title=f"{stock} Stock Closing Price", xaxis_title="Date", yaxis_title="Price ($)")
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # Trend note logic
-        if stock_df['close'].iloc[-1] > stock_df['close'].iloc[0]:
-            trend_note = 'Stock is on a solid upward trend. Investing here might be profitable.'
-        elif stock_df['close'].iloc[-1] < stock_df['close'].iloc[0]:  # Added this condition
-            trend_note = 'Stock has been trending downwards. Caution is advised.'
-        else:
-            trend_note = 'Stock price has remained stable.'
-
-        st.markdown(f"Trend Note: {trend_note}")
-    else:
-        st.error(f"Data for {stock} is missing required columns.")
-
-
-def strategy_simulation():
-    data = pd.read_csv('all_stocks_5yr.csv')
-    names = list(data['Name'].unique())
-    selected_name = st.selectbox("Select Company Name", names)
-
-    if selected_name:
-        df = data_prep(data, selected_name)
-        
-        # Get unique years from the dataset for dynamic selection
-        df['date'] = pd.to_datetime(df['date'])
-        years = df['date'].dt.year.unique().tolist()
-        years.sort()
-
-        # Year selection based on dataset
-        selected_year = st.selectbox("Select Year", years)
-
-        # Filter data based on selected year
-        df_selected_year = df[df['date'].dt.year == selected_year]
-
-        initial_investment = st.number_input("Enter your initial investment ($)", value=1000, step=100)
-        if st.button("Start Simulation"):
-            net_worth_history = test_stock(df_selected_year, initial_investment, num_episodes=100)
-            plot_net_worth(net_worth_history, df_selected_year)
-            metrics = calculate_performance_metrics(net_worth_history, initial_investment)
-            display_performance_metrics(metrics)
-
-if __name__ == "__main__":  # Change _name_ and _main_ to __name__ and __main__
-    main()
+# Plot the net worth graph
+plot_net_worth(net_worth_history, stock_data)

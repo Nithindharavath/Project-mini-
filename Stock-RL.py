@@ -374,43 +374,24 @@ def strategy_simulation():
 
     if selected_name:
         df = data_prep(data, selected_name)
-
-        if 'date' not in df.columns:
-            st.error("The dataset does not contain a 'date' column.")
-            return
-
-        df['date'] = pd.to_datetime(df['date'], errors='coerce')
-        df = df.dropna(subset=['date'])
-
+        
+        # Get unique years from the dataset for dynamic selection
+        df['date'] = pd.to_datetime(df['date'])
         years = df['date'].dt.year.unique().tolist()
         years.sort()
 
+        # Year selection based on dataset
         selected_year = st.selectbox("Select Year", years)
-        df_selected_year = df[df['date'].dt.year == selected_year]
 
-        if df_selected_year.empty:
-            st.error("No data available for the selected year.")
-            return
+        # Filter data based on selected year
+        df_selected_year = df[df['date'].dt.year == selected_year]
 
         initial_investment = st.number_input("Enter your initial investment ($)", value=1000, step=100)
         if st.button("Start Simulation"):
             net_worth_history = test_stock(df_selected_year, initial_investment, num_episodes=100)
-
-            if net_worth_history is None:
-                st.error("Simulation did not return any net worth history.")
-                return
-
             plot_net_worth(net_worth_history, df_selected_year)
-
             metrics = calculate_performance_metrics(net_worth_history, initial_investment)
-
-            # Debugging message to inspect metrics
-            st.write("Metrics:", metrics)
-
-            if metrics is not None:
-                display_performance_metrics(metrics)
-            else:
-                st.error("Error calculating performance metrics.")
+            display_performance_metrics(metrics)
 
 if __name__ == "__main__":  # Change _name_ and _main_ to __name__ and __main__
     main()

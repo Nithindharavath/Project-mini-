@@ -293,8 +293,7 @@ def home_page():
     # Column 1: Display the insights table
     with col1:
         st.write("### Company Trends")
-        # Filter the insights_df to show only the required columns, removing the first column
-        st.write(insights_df[['Company', 'Performance Trend', 'Average Closing Price']])
+        st.write(insights_df)
 
     # Column 2: Display the bar graph for the top 5 upward companies
     with col2:
@@ -323,7 +322,7 @@ def home_page():
     st.markdown("<style>h1 {color: darkslategray;} h2 {color: darkslategray;}</style>", unsafe_allow_html=True)
 
 
-    
+
 def data_exploration():
     data = pd.read_csv('all_stocks_5yr.csv')
     names = list(data['Name'].unique())
@@ -389,4 +388,4 @@ def strategy_simulation():
             display_performance_metrics(metrics)
 
 if __name__ == "__main__":  # Change _name and main to _name_ and _main_
-    main()
+    main()  

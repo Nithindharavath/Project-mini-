@@ -375,26 +375,19 @@ def strategy_simulation():
     if selected_name:
         df = data_prep(data, selected_name)
 
-        # Check if 'date' column exists
         if 'date' not in df.columns:
             st.error("The dataset does not contain a 'date' column.")
             return
 
-        # Convert 'date' to datetime
-        df['date'] = pd.to_datetime(df['date'], errors='coerce')  # Handle any parsing errors
-        df = df.dropna(subset=['date'])  # Drop rows where 'date' couldn't be parsed
+        df['date'] = pd.to_datetime(df['date'], errors='coerce')
+        df = df.dropna(subset=['date'])
 
-        # Get unique years from the dataset for dynamic selection
         years = df['date'].dt.year.unique().tolist()
         years.sort()
 
-        # Year selection based on dataset
         selected_year = st.selectbox("Select Year", years)
-
-        # Filter data based on selected year
         df_selected_year = df[df['date'].dt.year == selected_year]
 
-        # Check if there is data for the selected year
         if df_selected_year.empty:
             st.error("No data available for the selected year.")
             return
@@ -403,20 +396,21 @@ def strategy_simulation():
         if st.button("Start Simulation"):
             net_worth_history = test_stock(df_selected_year, initial_investment, num_episodes=100)
 
-            # Check if net worth history is empty
-            if not net_worth_history:
+            if net_worth_history is None:
                 st.error("Simulation did not return any net worth history.")
                 return
 
             plot_net_worth(net_worth_history, df_selected_year)
+
             metrics = calculate_performance_metrics(net_worth_history, initial_investment)
 
-            # Check if metrics were calculated successfully
+            # Debugging message to inspect metrics
+            st.write("Metrics:", metrics)
+
             if metrics is not None:
                 display_performance_metrics(metrics)
             else:
                 st.error("Error calculating performance metrics.")
-
 
 if __name__ == "__main__":  # Change _name_ and _main_ to __name__ and __main__
     main()

@@ -227,6 +227,7 @@ def calculate_performance_metrics(net_worth, initial_investment):
     annualized_return = (net_worth[-1] / initial_investment) ** (365 / len(net_worth)) - 1
     daily_returns = np.diff(net_worth) / net_worth[:-1]
     volatility = np.std(daily_returns)
+    
 
     sharpe_ratio = annualized_return / volatility if volatility != 0 else np.nan  # Return NaN if volatility is zero
 
@@ -374,24 +375,47 @@ def strategy_simulation():
 
     if selected_name:
         df = data_prep(data, selected_name)
-        
-        # Get unique years from the dataset for dynamic selection
-        df['date'] = pd.to_datetime(df['date'])
+
+        # Ensure 'date' column exists and is in the correct format
+        if 'date' not in df.columns:
+            st.error("The dataset does not contain a 'date' column.")
+            return
+
+        df['date'] = pd.to_datetime(df['date'], errors='coerce')
+        df = df.dropna(subset=['date'])
+
         years = df['date'].dt.year.unique().tolist()
         years.sort()
 
-        # Year selection based on dataset
         selected_year = st.selectbox("Select Year", years)
-
-        # Filter data based on selected year
         df_selected_year = df[df['date'].dt.year == selected_year]
+
+        if df_selected_year.empty:
+            st.error("No data available for the selected year.")
+            return
 
         initial_investment = st.number_input("Enter your initial investment ($)", value=1000, step=100)
         if st.button("Start Simulation"):
             net_worth_history = test_stock(df_selected_year, initial_investment, num_episodes=100)
+
+            if net_worth_history is None:
+                st.error("Simulation did not return any net worth history.")
+                return
+
             plot_net_worth(net_worth_history, df_selected_year)
+
             metrics = calculate_performance_metrics(net_worth_history, initial_investment)
-            display_performance_metrics(metrics)
+
+            # Debugging message to inspect metrics
+            st.write("Metrics before displaying:", metrics)
+
+            if metrics:
+                try:
+                    display_performance_metrics(metrics)
+                except Exception as e:
+                    st.error(f"Error displaying metrics: {e}")
+            else:
+                st.error("Error: Metrics are None or empty.")
 
 if __name__ == "__main__":  # Change _name_ and _main_ to __name__ and __main__
     main()

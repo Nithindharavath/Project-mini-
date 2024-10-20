@@ -15,14 +15,11 @@ class DQN(nn.Module):
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, output_dim)
 
-
     def forward(self, x):
         x = torch.relu(self.fc1(x))
         x = torch.relu(self.fc2(x))
         x = self.fc3(x)
         return x
-
-
 
 # Initialize DQN
 input_dim = 3  # Number of state features
@@ -387,5 +384,5 @@ def strategy_simulation():
             metrics = calculate_performance_metrics(net_worth_history, initial_investment)
             display_performance_metrics(metrics)
 
-if _name_ == "_main":  # Change _name and main to _name and main
+if _name_ == "_main_":  # Change _name and main to _name and main
     main()

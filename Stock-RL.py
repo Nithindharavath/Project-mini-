@@ -258,18 +258,20 @@ def home_page():
     
     for name in names[1:]:
         df = data_prep(data, name)
+        avg_closing_price = df['close'].mean()  # Average closing price
         initial_closing_price = df['close'].iloc[0]
-        performance_trend = "Upward" if df['close'].iloc[-1] > initial_closing_price else "Downward"
+        performance_trend = "Upward" if avg_closing_price > initial_closing_price else "Downward"
 
         insights.append({
             "Company": name,
             "Performance Trend": performance_trend,
+            "Average Closing Price": avg_closing_price,
         })
 
     # Create a DataFrame and sort it with upward companies first
     insights_df = pd.DataFrame(insights)
     insights_df['Upward Indicator'] = insights_df['Performance Trend'].apply(lambda x: 1 if x == "Upward" else 0)
-    insights_df = insights_df.sort_values(by=['Upward Indicator'], ascending=[False]).drop(columns=['Upward Indicator'])
+    insights_df = insights_df.sort_values(by=['Upward Indicator', 'Average Closing Price'], ascending=[False, False]).drop(columns=['Upward Indicator'])
 
     # Create a bar graph for the top 5 upward companies
     top_upward_companies = insights_df[insights_df['Performance Trend'] == "Upward"].head(5)
@@ -288,19 +290,33 @@ def home_page():
             fig = go.Figure()
             fig.add_trace(go.Bar(
                 x=top_upward_companies['Company'],
-                y=top_upward_companies['Performance Trend'].apply(lambda x: 1 if x == "Upward" else 0),
-                marker_color='royalblue'  # Professional color
+                y=top_upward_companies['Average Closing Price'],
+                marker_color='royalblue',  # Professional color
+                text=top_upward_companies['Average Closing Price'],  # Show values on bars
+                textposition='auto'  # Position the text automatically
             ))
 
             fig.update_layout(
-                title="Top 5 Upward Companies",
+                title="Average Closing Prices of Top 5 Upward Companies",
                 xaxis_title="Company",
-                yaxis_title="Trend (1 = Upward)",
+                yaxis_title="Average Closing Price ($)",
                 plot_bgcolor='rgba(0, 0, 0, 0)',
-                title_font=dict(size=16, color='darkslategray'),  # Professional color for title
+                title_font=dict(size=18, color='darkslategray'),  # Professional color for title
                 xaxis=dict(tickangle=-45, title_font=dict(size=14), tickfont=dict(size=12)),
-                yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12), tickvals=[0, 1], ticktext=["Downward", "Upward"]),
-                margin=dict(l=20, r=20, t=40, b=40)
+                yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
+                margin=dict(l=20, r=20, t=40, b=40),
+                annotations=[
+                    dict(
+                        x=row['Company'],
+                        y=row['Average Closing Price'],
+                        text=f"${row['Average Closing Price']:.2f}",
+                        showarrow=True,
+                        arrowhead=2,
+                        ax=0,
+                        ay=-40,
+                        font=dict(color='black')
+                    ) for i, row in top_upward_companies.iterrows()
+                ]
             )
 
             st.plotly_chart(fig, use_container_width=True)

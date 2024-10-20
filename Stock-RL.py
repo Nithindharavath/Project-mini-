@@ -9,8 +9,8 @@ import random
 from collections import deque
 
 class DQN(nn.Module):
-    def __init__(self, input_dim, output_dim):  # Change _init to __init__
-        super(DQN, self).__init__()  # Change _init to __init__()
+    def _init(self, input_dim, output_dim):  # Change _init to __init_
+        super(DQN, self)._init()  # Change _init to __init_()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, output_dim)
@@ -114,8 +114,9 @@ def test_stock(stocks_test, initial_investment, num_episodes):
 
         for t in range(len(stocks_test) - 1):
             action = next_act(state, epsilon, output_dim)
-            next_state = get_state(stocks_test, t + 1)  # Ensure next_state is assigned here
+            next_state = get_state(stocks_test, t + 1)
             reward = 0
+            done = False  # Initialize done
 
             close_price = stocks_test['close'].iloc[t]
             if action == 0:  # Buy
@@ -126,25 +127,29 @@ def test_stock(stocks_test, initial_investment, num_episodes):
                 if num_stocks > 0:  # Only sell if we own stocks
                     num_stocks -= 1
                     net_worth += close_price
-                    reward = close_price  # Reward for selling
+                    # Calculate profit/loss considering the previous close price
+                    reward = close_price - stocks_test['close'].iloc[t-1]
 
             if num_stocks < 0:
                 num_stocks = 0
 
-            done = t == len(stocks_test) - 2
+            # Adjust net worth based on current holdings
+            current_value = net_worth + (num_stocks * stocks_test['close'].iloc[t])
             total_reward += reward
-            remember(state, action, reward, next_state, done)  # This should now work correctly
+            remember(state, action, reward, next_state, done)
+
+            # Update the net worth for the history
+            net_worth_history.append(current_value)
             state = next_state
 
-            if done:
-                break
+            # Mark the episode as done at the last time step
+            if t == len(stocks_test) - 2:
+                done = True
 
         epsilon = max(epsilon_end, epsilon_decay * epsilon)
         replay()
         if episode % update_target_every == 0:
             update_target_network()
-
-        net_worth_history.append(net_worth)
 
     return net_worth_history
 
@@ -182,6 +187,7 @@ def plot_net_worth(net_worth, stock_df):
 
 
 # Function to plot net worth with a dynamic note
+# Function to plot net worth with a dynamic note
 def plot_net_worth(net_worth, stock_df):
     net_worth_df = pd.DataFrame(net_worth, columns=['value'])
     
@@ -201,35 +207,28 @@ def plot_net_worth(net_worth, stock_df):
     start_net_worth = net_worth[0]  # Starting portfolio value
     end_net_worth = net_worth[-1]   # Final portfolio value
     
-    st.write(f"Start Portfolio Value: {start_net_worth:.2f}")
-    st.write(f"End Portfolio Value: {end_net_worth:.2f}")
+    st.write(f"<span style='color:gray;'>Start Portfolio Value: {start_net_worth:.2f}</span>", unsafe_allow_html=True)
+    st.write(f"<span style='color:gray;'>End Portfolio Value: {end_net_worth:.2f}</span>", unsafe_allow_html=True)
     
     # Display a note based on net worth increase or decrease
     if end_net_worth > start_net_worth:
-        st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> '
-                    'Increase in your net worth as a result of model decisions.</p>', unsafe_allow_html=True)
+        note_color = "green"  # Color for increase
+        note_text = "Increase in your net worth as a result of model decisions."
     else:
-        st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> '
-                    'Decrease in your net worth as a result of model decisions.</p>', unsafe_allow_html=True)
+        note_color = "red"  # Color for decrease
+        note_text = "Decrease in your net worth as a result of model decisions."
+    
+    st.markdown(f"<b style='color:{note_color}; font-size: 20px;'>NOTE:</b> <span style='color:blue; font-size: 20px;'>{note_text}</span>", unsafe_allow_html=True)
+
 
 # Function to calculate performance metrics
 def calculate_performance_metrics(net_worth, initial_investment):
     net_worth = np.array(net_worth)
-    if len(net_worth) < 2:  # Ensure there are enough data points
-        return {
-            "Total Return": np.nan,
-            "Annualized Return": np.nan,
-            "Volatility": np.nan,
-            "Sharpe Ratio": np.nan
-        }
-    
     returns = (net_worth[-1] - initial_investment) / initial_investment
     annualized_return = (net_worth[-1] / initial_investment) ** (365 / len(net_worth)) - 1
     daily_returns = np.diff(net_worth) / net_worth[:-1]
     volatility = np.std(daily_returns)
-    
-
-    sharpe_ratio = annualized_return / volatility if volatility != 0 else np.nan  # Return NaN if volatility is zero
+    sharpe_ratio = annualized_return / volatility if volatility != 0 else 0  # Prevent division by zero
 
     return {
         "Total Return": returns,
@@ -237,6 +236,12 @@ def calculate_performance_metrics(net_worth, initial_investment):
         "Volatility": volatility,
         "Sharpe Ratio": sharpe_ratio
     }
+
+# Function to display performance metrics
+def display_performance_metrics(metrics):
+    st.write("### Performance Metrics")
+    for key, value in metrics.items():
+        st.write(f"{key}: {value:.2f}")
 
 def main():
     st.title("Enhancing Stock Trading Strategy Using Reinforcement Learning")
@@ -296,38 +301,26 @@ def home_page():
             fig.add_trace(go.Bar(
                 x=top_upward_companies['Company'],
                 y=top_upward_companies['Average Closing Price'],
-                marker_color='royalblue',  # Professional color
-                text=top_upward_companies['Average Closing Price'],  # Show values on bars
-                textposition='auto'  # Position the text automatically
+                marker_color='royalblue'  # Professional color
             ))
 
             fig.update_layout(
-                title="Average Closing Prices of Top 5 Upward Companies",
+                title="Avg Closing Prices of Top 5 Upward Companies",
                 xaxis_title="Company",
                 yaxis_title="Average Closing Price ($)",
                 plot_bgcolor='rgba(0, 0, 0, 0)',
-                title_font=dict(size=18, color='darkslategray'),  # Professional color for title
+                title_font=dict(size=16, color='darkslategray'),  # Professional color for title
                 xaxis=dict(tickangle=-45, title_font=dict(size=14), tickfont=dict(size=12)),
                 yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
-                margin=dict(l=20, r=20, t=40, b=40),
-                annotations=[
-                    dict(
-                        x=row['Company'],
-                        y=row['Average Closing Price'],
-                        text=f"${row['Average Closing Price']:.2f}",
-                        showarrow=True,
-                        arrowhead=2,
-                        ax=0,
-                        ay=-40,
-                        font=dict(color='black')
-                    ) for i, row in top_upward_companies.iterrows()
-                ]
+                margin=dict(l=20, r=20, t=40, b=40)
             )
 
             st.plotly_chart(fig, use_container_width=True)
 
     # Optional: Style for headings
     st.markdown("<style>h1 {color: darkslategray;} h2 {color: darkslategray;}</style>", unsafe_allow_html=True)
+
+
 
 def data_exploration():
     data = pd.read_csv('all_stocks_5yr.csv')
@@ -366,7 +359,6 @@ def show_stock_trend(stock, stock_df):
     else:
         st.error(f"Data for {stock} is missing required columns.")
 
-        
 
 def strategy_simulation():
     data = pd.read_csv('all_stocks_5yr.csv')
@@ -394,6 +386,5 @@ def strategy_simulation():
             metrics = calculate_performance_metrics(net_worth_history, initial_investment)
             display_performance_metrics(metrics)
 
-
-if __name__ == "__main__":  # Change _name_ and _main_ to __name__ and __main__
+if _name_ == "_main":  # Change _name and main to _name_ and _main_
     main()

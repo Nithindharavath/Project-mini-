@@ -310,7 +310,7 @@ def home_page():
                 xaxis_title="Company",
                 yaxis_title="Average Closing Price ($)",
                 plot_bgcolor='rgba(0, 0, 0, 0)',
-                title_font=dict(size=20, color='white'),  # Professional color for title
+                title_font=dict(size=20, color=rgba(245, 40, 145, 0)),  # Professional color for title
                 xaxis=dict(tickangle=-45, title_font=dict(size=14), tickfont=dict(size=12)),
                 yaxis=dict(title_font=dict(size=14), tickfont=dict(size=12)),
                 margin=dict(l=20, r=20, t=40, b=40)

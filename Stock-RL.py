@@ -9,8 +9,8 @@ import random
 from collections import deque
 
 class DQN(nn.Module):
-    def _init_(self, input_dim, output_dim):
-        super(DQN, self)._init_()
+    def __init__(self, input_dim, output_dim):  # Corrected constructor
+        super(DQN, self).__init__()
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, output_dim)
@@ -269,8 +269,6 @@ def show_stock_trend(stock, stock_df):
     else:
         st.error(f"Data for {stock} is missing required columns.")
 
-        
-
 def strategy_simulation():
     data = pd.read_csv('all_stocks_5yr.csv')
     names = list(data['Name'].unique())
@@ -297,5 +295,5 @@ def strategy_simulation():
             metrics = calculate_performance_metrics(net_worth_history, initial_investment)
             display_performance_metrics(metrics)
 
-if _name_ == "_main_":
+if __name__ == "__main__":  # Corrected main guard
     main()

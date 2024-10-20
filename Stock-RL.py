@@ -297,7 +297,7 @@ def home_page():
             ))
 
             fig.update_layout(
-                title="Average Closing Prices of Top 5 Upward Companies",
+                title="TOP 5 ",
                 xaxis_title="Company",
                 yaxis_title="Average Closing Price ($)",
                 plot_bgcolor='rgba(0, 0, 0, 0)',

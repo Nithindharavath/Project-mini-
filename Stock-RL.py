@@ -150,10 +150,7 @@ def test_stock(stocks_test, initial_investment, num_episodes):
             update_target_network()
 
     return net_worth_history
-
-
-
-def plot_net_worth(net_worth, stock_df):
+def plot_net_worth(net_worth, stock_df, initial_investment):
     net_worth_df = pd.DataFrame(net_worth, columns=['value'])
     
     # Ensure there are enough dates for plotting
@@ -169,7 +166,7 @@ def plot_net_worth(net_worth, stock_df):
     st.plotly_chart(fig, use_container_width=True)
     
     # Display the start and end portfolio values
-    start_net_worth = net_worth[0]  # Starting portfolio value
+    start_net_worth = initial_investment  # Start portfolio value is now equal to the initial investment
     end_net_worth = net_worth[-1]   # Final portfolio value
     
     st.write(f"Start Portfolio Value: {start_net_worth:.2f}")
@@ -182,7 +179,6 @@ def plot_net_worth(net_worth, stock_df):
     else:
         st.markdown('<b><p style="font-family:Play; color:Cyan; font-size: 20px;">NOTE:<br> '
                     'Decrease in your net worth as a result of model decisions.</p>', unsafe_allow_html=True)
-
 
 # Function to plot net worth with a dynamic note
 # Function to plot net worth with a dynamic note
@@ -225,8 +221,8 @@ def calculate_performance_metrics(net_worth, initial_investment):
     returns = (net_worth[-1] - initial_investment) / initial_investment  # Total return
 
     # Corrected Annualized Return Calculation
-    N = len(net_worth)  # Number of daily data points
-    annualized_return = (net_worth[-1] / initial_investment) ** (365 / N) - 1
+    N = len(net_worth) - 1  # Number of trading days (use len of net_worth - 1)
+    annualized_return = (net_worth[-1] / initial_investment) ** (365 / N) - 1 if N > 0 else 0
 
     # Calculate daily returns and volatility
     daily_returns = np.diff(net_worth) / net_worth[:-1]
@@ -241,7 +237,6 @@ def calculate_performance_metrics(net_worth, initial_investment):
         "Volatility": volatility,
         "Sharpe Ratio": sharpe_ratio
     }
-
 # Function to display performance metrics
 def display_performance_metrics(metrics):
     st.write("### Performance Metrics")

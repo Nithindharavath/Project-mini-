@@ -226,7 +226,7 @@ def calculate_performance_metrics(net_worth, initial_investment, years=1):
     # Volatility (scaled by sqrt(252) to annualize it)
     volatility = np.std(daily_returns) * np.sqrt(252)  # This is fine for annual volatility
 
-    # Sharpe Ratio calculation
+    # Sharpe Ratio calculation (corrected to just return/volatility)
     sharpe_ratio = returns / volatility if volatility != 0 else 0
 
     return {
@@ -240,6 +240,7 @@ def display_performance_metrics(metrics):
     st.write("### Performance Metrics")
     for key, value in metrics.items():
         st.write(f"{key}: {value:.2f}")
+
 
 def main():
     st.title("Enhancing Stock Trading Strategy Using Reinforcement Learning")

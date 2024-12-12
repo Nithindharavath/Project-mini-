@@ -356,7 +356,7 @@ def show_stock_trend(stock, stock_df):
     else:
         st.error(f"Data for {stock} is missing required columns.")
 
-import plotly.graph_objects as go
+
 
 def strategy_simulation():
     data = pd.read_csv('all_stocks_5yr.csv')
@@ -381,23 +381,45 @@ def strategy_simulation():
         if st.button("Start Simulation"):
             net_worth_history = test_stock(df_selected_year, initial_investment, num_episodes=100)
             
-            # Improved graph display
+            # Create a Plotly figure
             fig = go.Figure()
 
-            # Add traces for net worth over time
+            # Add a smoother line for net worth over time
             fig.add_trace(go.Scatter(
                 x=list(range(len(net_worth_history))),
                 y=net_worth_history,
                 mode='lines+markers',
                 name="Net Worth",
-                line=dict(color='green', width=2),
-                marker=dict(size=6, color='green', opacity=0.6, line=dict(width=1, color='black')),
+                line=dict(color='rgb(0, 204, 102)', width=3),  # Light Green for net worth line
+                marker=dict(size=6, color='rgb(0, 204, 102)', opacity=0.7, line=dict(width=1, color='black')),
                 hovertemplate="Episode: %{x}<br>Net Worth: $%{y}<extra></extra>"
             ))
 
-            # Add annotations for important points
+            # Add a subtle moving average for a smoother trend line
+            moving_avg = np.convolve(net_worth_history, np.ones(5)/5, mode='valid')
+            fig.add_trace(go.Scatter(
+                x=list(range(4, len(net_worth_history))),
+                y=moving_avg,
+                mode='lines',
+                name="5-Episode Moving Average",
+                line=dict(color='rgb(255, 165, 0)', width=3, dash='dot'),  # Orange dashed line for moving average
+                hovertemplate="Episode: %{x}<br>Moving Average: $%{y}<extra></extra>"
+            ))
+
+            # Add an area plot for net worth growth, with a gradient effect
+            fig.add_trace(go.Scatter(
+                x=list(range(len(net_worth_history))),
+                y=net_worth_history,
+                fill='tozeroy',
+                fillcolor='rgba(0, 204, 102, 0.3)',  # Light green fill with transparency
+                name="Net Worth Area",
+                line=dict(color='rgba(0, 204, 102, 0)', width=0),
+                hovertemplate="Episode: %{x}<br>Net Worth: $%{y}<extra></extra>"
+            ))
+
+            # Add annotations for the final value
             fig.add_annotation(
-                x=len(net_worth_history)-1, 
+                x=len(net_worth_history)-1,
                 y=net_worth_history[-1],
                 text=f"Final Net Worth: ${net_worth_history[-1]:.2f}",
                 showarrow=True,
@@ -405,22 +427,29 @@ def strategy_simulation():
                 ax=0,
                 ay=-40,
                 font=dict(size=12, color="white"),
-                bgcolor="green"
+                bgcolor="rgb(0, 204, 102)"
             )
 
+            # Update Layout to make the chart visually appealing
             fig.update_layout(
-                title="Strategy Simulation: Net Worth Over Time",
+                title=f"Strategy Simulation: Net Worth Over Time - {selected_name}",
                 xaxis_title="Episodes",
                 yaxis_title="Net Worth ($)",
-                template="plotly_dark",
-                margin=dict(l=10, r=10, t=40, b=40),
-                showlegend=True
+                template="plotly_dark",  # Dark theme for contrast
+                margin=dict(l=40, r=40, t=40, b=40),
+                showlegend=True,
+                hovermode="closest",
+                xaxis=dict(showgrid=False, zeroline=False),
+                yaxis=dict(showgrid=True, zeroline=True, gridcolor='rgba(255, 255, 255, 0.1)'),  # Light grid lines
+                plot_bgcolor='rgba(0, 0, 0, 0)',  # Transparent background
             )
 
             st.plotly_chart(fig)
 
+            # Calculate and display performance metrics
             metrics = calculate_performance_metrics(net_worth_history, initial_investment)
             display_performance_metrics(metrics)
+
 
 
 

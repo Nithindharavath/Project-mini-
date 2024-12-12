@@ -233,6 +233,7 @@ def calculate_performance_metrics(net_worth, initial_investment, years=1):
     return {
         "Total Return": returns,
         "Volatility": volatility,
+        "Annualized Return":annualized_return ,
         "Sharpe Ratio": sharpe_ratio
     }
 # Function to display performance metrics

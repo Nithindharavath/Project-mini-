@@ -217,25 +217,21 @@ def plot_net_worth(net_worth, stock_df):
 def calculate_performance_metrics(net_worth, initial_investment, years=1):
     net_worth = np.array(net_worth)
     
-    # Total return calculation
-    total_return = (net_worth[-1] - initial_investment) / initial_investment
+    # Total return (correct)
+    returns = (net_worth[-1] - initial_investment) / initial_investment
 
-    # Calculate daily returns
+    # Calculate daily returns (correct)
     daily_returns = np.diff(net_worth) / net_worth[:-1]
-    
-    # Daily volatility (standard deviation)
-    daily_volatility = np.std(daily_returns)
-    
-    # Annualize volatility by multiplying by sqrt(252)
-    annualized_volatility = daily_volatility * np.sqrt(252)
-    
-    # Sharpe ratio (annualized return / annualized volatility)
-    annualized_return = (net_worth[-1] / initial_investment) ** (1 / years) - 1 if years > 0 else 0
-    sharpe_ratio = annualized_return / annualized_volatility if annualized_volatility != 0 else 0
+
+    # Volatility (scaled by sqrt(252) to annualize it)
+    volatility = np.std(daily_returns) * np.sqrt(252)  # This is fine for annual volatility
+
+    # Sharpe Ratio calculation
+    sharpe_ratio = returns / volatility if volatility != 0 else 0
 
     return {
-        "Total Return": total_return,
-        "Volatility": annualized_volatility,  # Corrected to show annualized volatility
+        "Total Return": returns,
+        "Volatility": volatility,
         "Sharpe Ratio": sharpe_ratio
     }
 

@@ -216,14 +216,24 @@ def plot_net_worth(net_worth, stock_df):
 
 
 # Function to calculate performance metrics
+import numpy as np
+
 def calculate_performance_metrics(net_worth, initial_investment, years=1):
-    net_worth = np.array(net_worth)
+    # Check if net_worth has more than 1 data point
+    if len(net_worth) <= 1:
+        raise ValueError("net_worth must contain more than one value to calculate returns.")
     
+    # Convert net_worth to a numpy array
+    net_worth = np.array(net_worth)
+
     # Calculate Total Return
     returns = (net_worth[-1] - initial_investment) / initial_investment  # Total return
 
     # Corrected Annualized Return Calculation (assuming `years` is passed, default is 1)
-    annualized_return = (net_worth[-1] / initial_investment) ** (1 / years) - 1 if years > 0 else 0
+    if years > 0:
+        annualized_return = (net_worth[-1] / initial_investment) ** (1 / years) - 1
+    else:
+        annualized_return = 0
 
     # Calculate daily returns and volatility
     daily_returns = np.diff(net_worth) / net_worth[:-1]
@@ -238,6 +248,7 @@ def calculate_performance_metrics(net_worth, initial_investment, years=1):
         "Volatility": volatility,
         "Sharpe Ratio": sharpe_ratio
     }
+
 # Function to display performance metrics
 def display_performance_metrics(metrics):
     st.write("### Performance Metrics")

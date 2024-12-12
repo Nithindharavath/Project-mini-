@@ -218,6 +218,8 @@ def plot_net_worth(net_worth, stock_df):
 # Function to calculate performance metrics
 def calculate_performance_metrics(net_worth, initial_investment, years=1):
     net_worth = np.array(net_worth)
+    
+    # Calculate Total Return
     returns = (net_worth[-1] - initial_investment) / initial_investment  # Total return
 
     # Corrected Annualized Return Calculation (assuming `years` is passed, default is 1)
@@ -230,10 +232,10 @@ def calculate_performance_metrics(net_worth, initial_investment, years=1):
     # Sharpe Ratio (avoid division by zero)
     sharpe_ratio = annualized_return / volatility if volatility != 0 else 0
 
+    # Return performance metrics without Annualized Return in the output
     return {
         "Total Return": returns,
         "Volatility": volatility,
-        "Annualized Return":annualized_return ,
         "Sharpe Ratio": sharpe_ratio
     }
 # Function to display performance metrics

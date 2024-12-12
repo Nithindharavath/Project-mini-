@@ -356,6 +356,8 @@ def show_stock_trend(stock, stock_df):
     else:
         st.error(f"Data for {stock} is missing required columns.")
 
+import plotly.graph_objects as go
+
 def strategy_simulation():
     data = pd.read_csv('all_stocks_5yr.csv')
     names = list(data['Name'].unique())
@@ -378,9 +380,48 @@ def strategy_simulation():
         initial_investment = st.number_input("Enter your initial investment ($)", value=1000, step=100)
         if st.button("Start Simulation"):
             net_worth_history = test_stock(df_selected_year, initial_investment, num_episodes=100)
-            plot_net_worth(net_worth_history, df_selected_year)
+            
+            # Improved graph display
+            fig = go.Figure()
+
+            # Add traces for net worth over time
+            fig.add_trace(go.Scatter(
+                x=list(range(len(net_worth_history))),
+                y=net_worth_history,
+                mode='lines+markers',
+                name="Net Worth",
+                line=dict(color='green', width=2),
+                marker=dict(size=6, color='green', opacity=0.6, line=dict(width=1, color='black')),
+                hovertemplate="Episode: %{x}<br>Net Worth: $%{y}<extra></extra>"
+            ))
+
+            # Add annotations for important points
+            fig.add_annotation(
+                x=len(net_worth_history)-1, 
+                y=net_worth_history[-1],
+                text=f"Final Net Worth: ${net_worth_history[-1]:.2f}",
+                showarrow=True,
+                arrowhead=2,
+                ax=0,
+                ay=-40,
+                font=dict(size=12, color="white"),
+                bgcolor="green"
+            )
+
+            fig.update_layout(
+                title="Strategy Simulation: Net Worth Over Time",
+                xaxis_title="Episodes",
+                yaxis_title="Net Worth ($)",
+                template="plotly_dark",
+                margin=dict(l=10, r=10, t=40, b=40),
+                showlegend=True
+            )
+
+            st.plotly_chart(fig)
+
             metrics = calculate_performance_metrics(net_worth_history, initial_investment)
             display_performance_metrics(metrics)
+
 
 
 if __name__ == "__main__":

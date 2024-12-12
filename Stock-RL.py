@@ -216,6 +216,8 @@ def plot_net_worth(net_worth, stock_df):
 
 def calculate_performance_metrics(net_worth, initial_investment, years=1):
     net_worth = np.array(net_worth)
+    
+    # Total Return
     returns = (net_worth[-1] - initial_investment) / initial_investment  # Total return
 
     # Corrected Annualized Return Calculation (assuming years is passed, default is 1)
@@ -228,13 +230,12 @@ def calculate_performance_metrics(net_worth, initial_investment, years=1):
     # Sharpe Ratio (avoid division by zero)
     sharpe_ratio = annualized_return / volatility if volatility != 0 else 0
 
+    # Return performance metrics without Annualized Return
     return {
         "Total Return": returns,
         "Volatility": volatility,
-        "Annualized Return":annualized_return ,
         "Sharpe Ratio": sharpe_ratio
     }
-
 
 # Function to display performance metrics
 def display_performance_metrics(metrics):
@@ -318,9 +319,6 @@ def home_page():
 
     # Optional: Style for headings
     st.markdown("<style>h1 {color: darkslategray;} h2 {color: darkslategray;}</style>", unsafe_allow_html=True)
-
-
-
 def data_exploration():
     data = pd.read_csv('all_stocks_5yr.csv')
     names = list(data['Name'].unique())
@@ -357,7 +355,6 @@ def show_stock_trend(stock, stock_df):
         st.markdown(f"Trend Note: {trend_note}")
     else:
         st.error(f"Data for {stock} is missing required columns.")
-
 
 def strategy_simulation():
     data = pd.read_csv('all_stocks_5yr.csv')

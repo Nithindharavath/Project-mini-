@@ -214,10 +214,6 @@ def plot_net_worth(net_worth, stock_df):
     
     st.markdown(f"<b style='color:{note_color}; font-size: 20px;'>NOTE:</b> <span style='color:cyan; font-size: 20px;'>{note_text}</span>", unsafe_allow_html=True)
 
-
-# Function to calculate performance metrics
-import numpy as np
-
 def calculate_performance_metrics(net_worth, initial_investment, years=1):
     # Check if net_worth has more than 1 data point
     if len(net_worth) <= 1:

@@ -214,8 +214,6 @@ def plot_net_worth(net_worth, stock_df):
     
     st.markdown(f"<b style='color:{note_color}; font-size: 20px;'>NOTE:</b> <span style='color:cyan; font-size: 20px;'>{note_text}</span>", unsafe_allow_html=True)
 
-import numpy as np
-
 def calculate_performance_metrics(net_worth, initial_investment, years=1):
     net_worth = np.array(net_worth)
     
@@ -230,7 +228,7 @@ def calculate_performance_metrics(net_worth, initial_investment, years=1):
     volatility = np.std(daily_returns) * np.sqrt(252)  # Annualized volatility based on daily returns
 
     # Sharpe Ratio (avoid division by zero)
-    sharpe_ratio = total_return / volatility if volatility != 0 else 0
+    sharpe_ratio = annualized_return / volatility if volatility != 0 else 0
 
     # Return performance metrics without Annualized Return
     return {

@@ -220,18 +220,15 @@ def calculate_performance_metrics(net_worth, initial_investment):
     net_worth = np.array(net_worth)
     returns = (net_worth[-1] - initial_investment) / initial_investment  # Total return
 
-    # Corrected Annualized Return Calculation
-    N = len(net_worth) - 1  # Number of trading days (use len of net_worth - 1)
-    years = N / 252
+    # Corrected Annualized Return Calculation (assuming `years` is passed, default is 1)
     annualized_return = (net_worth[-1] / initial_investment) ** (1 / years) - 1 if years > 0 else 0
 
     # Calculate daily returns and volatility
     daily_returns = np.diff(net_worth) / net_worth[:-1]
-    volatility = np.std(daily_returns)* np.sqrt(252)
+    volatility = np.std(daily_returns) * np.sqrt(252)  # Annualized volatility based on daily returns
 
     # Sharpe Ratio (avoid division by zero)
     sharpe_ratio = annualized_return / volatility if volatility != 0 else 0
-
     return {
         "Total Return": returns,
         "Annualized Return": annualized_return,

@@ -232,7 +232,6 @@ def calculate_performance_metrics(net_worth, initial_investment, years=1):
 
     return {
         "Total Return": returns,
-        "Annualized Return": annualized_return,
         "Volatility": volatility,
         "Sharpe Ratio": sharpe_ratio
     }

@@ -357,6 +357,8 @@ def show_stock_trend(stock, stock_df):
         st.error(f"Data for {stock} is missing required columns.")
 
 
+import plotly.graph_objects as go
+import numpy as np
 
 def strategy_simulation():
     data = pd.read_csv('all_stocks_5yr.csv')
@@ -380,40 +382,18 @@ def strategy_simulation():
         initial_investment = st.number_input("Enter your initial investment ($)", value=1000, step=100)
         if st.button("Start Simulation"):
             net_worth_history = test_stock(df_selected_year, initial_investment, num_episodes=100)
-            
-            # Create a Plotly figure
+
+            # Improved graph display with original structure
             fig = go.Figure()
 
-            # Add a smoother line for net worth over time
+            # Add trace for net worth over time
             fig.add_trace(go.Scatter(
                 x=list(range(len(net_worth_history))),
                 y=net_worth_history,
                 mode='lines+markers',
                 name="Net Worth",
-                line=dict(color='rgb(0, 204, 102)', width=3),  # Light Green for net worth line
+                line=dict(color='rgb(0, 204, 102)', width=3),  # Smooth green line for net worth
                 marker=dict(size=6, color='rgb(0, 204, 102)', opacity=0.7, line=dict(width=1, color='black')),
-                hovertemplate="Episode: %{x}<br>Net Worth: $%{y}<extra></extra>"
-            ))
-
-            # Add a subtle moving average for a smoother trend line
-            moving_avg = np.convolve(net_worth_history, np.ones(5)/5, mode='valid')
-            fig.add_trace(go.Scatter(
-                x=list(range(4, len(net_worth_history))),
-                y=moving_avg,
-                mode='lines',
-                name="5-Episode Moving Average",
-                line=dict(color='rgb(255, 165, 0)', width=3, dash='dot'),  # Orange dashed line for moving average
-                hovertemplate="Episode: %{x}<br>Moving Average: $%{y}<extra></extra>"
-            ))
-
-            # Add an area plot for net worth growth, with a gradient effect
-            fig.add_trace(go.Scatter(
-                x=list(range(len(net_worth_history))),
-                y=net_worth_history,
-                fill='tozeroy',
-                fillcolor='rgba(0, 204, 102, 0.3)',  # Light green fill with transparency
-                name="Net Worth Area",
-                line=dict(color='rgba(0, 204, 102, 0)', width=0),
                 hovertemplate="Episode: %{x}<br>Net Worth: $%{y}<extra></extra>"
             ))
 
@@ -430,7 +410,6 @@ def strategy_simulation():
                 bgcolor="rgb(0, 204, 102)"
             )
 
-            # Update Layout to make the chart visually appealing
             fig.update_layout(
                 title=f"Strategy Simulation: Net Worth Over Time - {selected_name}",
                 xaxis_title="Episodes",
@@ -446,9 +425,9 @@ def strategy_simulation():
 
             st.plotly_chart(fig)
 
-            # Calculate and display performance metrics
             metrics = calculate_performance_metrics(net_worth_history, initial_investment)
             display_performance_metrics(metrics)
+
 
 
 

@@ -222,11 +222,18 @@ def plot_net_worth(net_worth, stock_df):
 # Function to calculate performance metrics
 def calculate_performance_metrics(net_worth, initial_investment):
     net_worth = np.array(net_worth)
-    returns = (net_worth[-1] - initial_investment) / initial_investment
-    annualized_return = (net_worth[-1] / initial_investment) ** (365 / len(net_worth)) - 1
+    returns = (net_worth[-1] - initial_investment) / initial_investment  # Total return
+
+    # Corrected Annualized Return Calculation
+    N = len(net_worth)  # Number of daily data points
+    annualized_return = (net_worth[-1] / initial_investment) ** (365 / N) - 1
+
+    # Calculate daily returns and volatility
     daily_returns = np.diff(net_worth) / net_worth[:-1]
     volatility = np.std(daily_returns)
-    sharpe_ratio = annualized_return / volatility if volatility != 0 else 0  # Prevent division by zero
+
+    # Sharpe Ratio (avoid division by zero)
+    sharpe_ratio = annualized_return / volatility if volatility != 0 else 0
 
     return {
         "Total Return": returns,

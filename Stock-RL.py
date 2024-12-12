@@ -356,55 +356,31 @@ def show_stock_trend(stock, stock_df):
     else:
         st.error(f"Data for {stock} is missing required columns.")
 
-def update_strategy_simulation_graph(df):
-    # Filter for positive and negative stock trends
-    df_positive = df[df['Trend'] > 0]
-    df_negative = df[df['Trend'] < 0]
+def strategy_simulation():
+    data = pd.read_csv('all_stocks_5yr.csv')
+    names = list(data['Name'].unique())
+    selected_name = st.selectbox("Select Company Name", names)
 
-    # Create bar graph for positive trends
-    fig_positive = px.bar(df_positive,
-                          x='Company',
-                          y='Trend',
-                          title="Upward Stock Trend Companies",
-                          color='Trend',
-                          color_continuous_scale='Viridis',  # Color scale for better visualization
-                          labels={'Company': 'Company Name', 'Trend': 'Stock Trend (%)'},
-                          template="plotly_dark")
+    if selected_name:
+        df = data_prep(data, selected_name)
+        
+        # Get unique years from the dataset for dynamic selection
+        df['date'] = pd.to_datetime(df['date'])
+        years = df['date'].dt.year.unique().tolist()
+        years.sort()
 
-    # Create bar graph for negative trends
-    fig_negative = px.bar(df_negative,
-                          x='Company',
-                          y='Trend',
-                          title="Downward Stock Trend Companies",
-                          color='Trend',
-                          color_continuous_scale='RdBu',  # Color scale for negative trends
-                          labels={'Company': 'Company Name', 'Trend': 'Stock Trend (%)'},
-                          template="plotly_dark")
+        # Year selection based on dataset
+        selected_year = st.selectbox("Select Year", years)
 
-    # Customize layout for better readability
-    fig_positive.update_layout(
-        xaxis_title='Company Name',
-        yaxis_title='Stock Trend (%)',
-        showlegend=False,
-        margin=dict(l=10, r=10, t=40, b=40)
-    )
+        # Filter data based on selected year
+        df_selected_year = df[df['date'].dt.year == selected_year]
 
-    fig_negative.update_layout(
-        xaxis_title='Company Name',
-        yaxis_title='Stock Trend (%)',
-        showlegend=False,
-        margin=dict(l=10, r=10, t=40, b=40)
-    )
-
-    return fig_positive, fig_negative
-
-# Example usage:
-# Assuming `df` is the DataFrame containing stock trend data
-# fig_positive, fig_negative = update_strategy_simulation_graph(df)
-
-# Show the graphs in Streamlit
-# st.plotly_chart(fig_positive)
-# st.plotly_chart(fig_negative)
+        initial_investment = st.number_input("Enter your initial investment ($)", value=1000, step=100)
+        if st.button("Start Simulation"):
+            net_worth_history = test_stock(df_selected_year, initial_investment, num_episodes=100)
+            plot_net_worth(net_worth_history, df_selected_year)
+            metrics = calculate_performance_metrics(net_worth_history, initial_investment)
+            display_performance_metrics(metrics)
 
 
 if __name__ == "__main__":

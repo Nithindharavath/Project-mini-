@@ -5,10 +5,8 @@ import plotly.graph_objects as go
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import plotly.express as px
 import random
 from collections import deque
-
 class DQN(nn.Module):
     def __init__(self, input_dim, output_dim):  # Corrected
         super(DQN, self).__init__()  # Correctly calling the parent class constructor

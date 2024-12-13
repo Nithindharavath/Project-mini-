@@ -356,10 +356,6 @@ def show_stock_trend(stock, stock_df):
     else:
         st.error(f"Data for {stock} is missing required columns.")
 
-
-import plotly.graph_objects as go
-import numpy as np
-
 def strategy_simulation():
     data = pd.read_csv('all_stocks_5yr.csv')
     names = list(data['Name'].unique())
@@ -382,55 +378,9 @@ def strategy_simulation():
         initial_investment = st.number_input("Enter your initial investment ($)", value=1000, step=100)
         if st.button("Start Simulation"):
             net_worth_history = test_stock(df_selected_year, initial_investment, num_episodes=100)
-
-            # Improved graph display with original structure
-            fig = go.Figure()
-
-            # Add trace for net worth over time
-            fig.add_trace(go.Scatter(
-                x=list(range(len(net_worth_history))),
-                y=net_worth_history,
-                mode='lines+markers',
-                name="Net Worth",
-                line=dict(color='rgb(0, 204, 102)', width=3),  # Smooth green line for net worth
-                marker=dict(size=6, color='rgb(0, 204, 102)', opacity=0.7, line=dict(width=1, color='black')),
-                hovertemplate="Episode: %{x}<br>Net Worth: $%{y}<extra></extra>"
-            ))
-
-            # Add annotations for the final value
-            fig.add_annotation(
-                x=len(net_worth_history)-1,
-                y=net_worth_history[-1],
-                text=f"Final Net Worth: ${net_worth_history[-1]:.2f}",
-                showarrow=True,
-                arrowhead=2,
-                ax=0,
-                ay=-40,
-                font=dict(size=12, color="white"),
-                bgcolor="rgb(0, 204, 102)"
-            )
-
-            fig.update_layout(
-                title=f"Strategy Simulation: Net Worth Over Time - {selected_name}",
-                xaxis_title="Episodes",
-                yaxis_title="Net Worth ($)",
-                template="plotly_dark",  # Dark theme for contrast
-                margin=dict(l=40, r=40, t=40, b=40),
-                showlegend=True,
-                hovermode="closest",
-                xaxis=dict(showgrid=False, zeroline=False),
-                yaxis=dict(showgrid=True, zeroline=True, gridcolor='rgba(255, 255, 255, 0.1)'),  # Light grid lines
-                plot_bgcolor='rgba(0, 0, 0, 0)',  # Transparent background
-            )
-
-            st.plotly_chart(fig)
-
+            plot_net_worth(net_worth_history, df_selected_year)
             metrics = calculate_performance_metrics(net_worth_history, initial_investment)
             display_performance_metrics(metrics)
-
-
-
-
 
 if __name__ == "__main__":
     main()
